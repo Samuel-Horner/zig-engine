@@ -1,0 +1,20 @@
+.{
+    .name = .example,
+    .version = "0.0.0",
+    .fingerprint = 0x6eec9b9fe7c0f64e, // Changing this has security and trust implications.
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .zig_arg_parser = .{
+            .url = "git+https://github.com/Samuel-Horner/zig-arg-parser.git#f529243baf631a52fe3c255de39e1d42ae7bf5c8",
+            .hash = "zig_arg_parser-0.0.0-lhm1fnVUAABj7Mf2XWAtIUI_aDkMAsU2Z1Jf2Qm4sIQw",
+        },
+        .zig_engine = .{
+            .path = "..",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
