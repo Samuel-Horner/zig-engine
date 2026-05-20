@@ -8,7 +8,7 @@ pub fn main(init: std.process.Init) !void {
     defer engine.deinit();
 
     while (!engine.window.shouldClose()) {
-        if (engine.window.keyPressed(engine.glfw.KeyEscape)) {
+        if (engine.window.keyPressed(engine.Input.Key.Escape)) {
             engine.window.close();
         }
 
