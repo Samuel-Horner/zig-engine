@@ -4,6 +4,8 @@ pub const glfw = @import("glfw");
 
 pub const Window = @import("window.zig");
 pub const Input = @import("input.zig");
+pub const Program = @import("program.zig");
+pub const Object = @import("object.zig");
 
 pub var window: Window = undefined;
 
