@@ -32,4 +32,14 @@ pub fn build(b: *std.Build) void {
     });
 
     b.installArtifact(lib);
+
+    const zig_engine_tests = b.addTest(.{
+        .root_module = zig_engine,
+        .use_llvm = true, // Needed for some reason
+    });
+
+    const run_zig_engine_tests = b.addRunArtifact(zig_engine_tests);
+
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&run_zig_engine_tests.step);
 }

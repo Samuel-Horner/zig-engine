@@ -6,6 +6,7 @@ pub const Window = @import("window.zig");
 pub const Input = @import("input.zig");
 pub const Program = @import("program.zig");
 pub const Object = @import("object.zig");
+pub const Math = @import("math/root.zig");
 
 pub var window: Window = undefined;
 
@@ -60,6 +61,10 @@ pub fn clearViewport() void {
 pub fn finishRender() void {
     glfw.pollEvents();
     glfw.swapBuffers(window.id);
+}
+
+test "unit" {
+    _ = @import("math/root.zig");
 }
 
 

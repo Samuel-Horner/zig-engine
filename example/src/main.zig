@@ -30,9 +30,9 @@ const Tri = struct {
     pub fn init(allocator: std.mem.Allocator) !Tri {
         var self: Tri = .{
             .mesh = try engine.Object.Mesh.init(allocator, &.{
-                .{ .x = 0, .y = 0, .z = 0 },
-                .{ .x = 1, .y = 0, .z = 0 },
-                .{ .x = 0.5, .y = 1, .z = 0 },
+                .{ .x = -1, .y = -1, .z = 0, .nx = 0, .ny = 0, .nz = 0},
+                .{ .x = 1, .y = -1, .z = 0, .nx = 1, .ny = 0, .nz = 0 },
+                .{ .x = 0, .y = 1, .z = 0, .nx = 0, .ny = 1, .nz = 0 },
             }, &.{ 2, 1, 0 }),
             .allocator = allocator,
         };
