@@ -1,5 +1,6 @@
 const std = @import("std");
 const gl = @import("gl");
+const ubo = @import("ubo.zig");
 
 id: c_uint,
 

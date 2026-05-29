@@ -1,5 +1,5 @@
 const std = @import("std");
-const gl = @import("gl");
+pub const gl = @import("gl");
 pub const glfw = @import("glfw");
 
 pub const Window = @import("window.zig");
@@ -7,6 +7,7 @@ pub const Input = @import("input.zig");
 pub const Program = @import("program.zig");
 pub const Object = @import("object.zig");
 pub const Math = @import("math/root.zig");
+pub const UBO = @import("ubo.zig").UBO;
 
 pub var window: Window = undefined;
 

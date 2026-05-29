@@ -6,8 +6,14 @@ in vec3 aNorm;
 out vec3 norm;
 out vec2 tex;
 
+
+layout (std140, binding = 0) uniform CameraBlock {
+    uniform mat4 proj;
+    uniform mat4 view;
+};
+
 void main() {
-    gl_Position = vec4(aVert.xy, 0., 1.);
+    gl_Position = proj * view * vec4(aVert, 1.);
     norm = aNorm;
     tex = aTex;
 }
