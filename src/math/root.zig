@@ -1,7 +1,7 @@
 /// Adapted from https://codeberg.org/grius/zm
-
 pub const Vec = @import("vec.zig").Vec;
 pub const Mat = @import("mat.zig").Mat;
+pub const Quaternion = @import("quaternion.zig").Quaternion;
 
 pub const Vec2 = Vec(f32, 2);
 pub fn vec2(x: f32, y: f32) Vec2 {
@@ -37,7 +37,13 @@ pub const Mat2 = Mat(f32, 2, 2);
 pub const Mat3 = Mat(f32, 3, 3);
 pub const Mat4 = Mat(f32, 4, 4);
 
+pub const Quat = Quaternion(f32);
+pub fn quat(w: f32, x: f32, y: f32, z: f32) Quat {
+    return .{ .w = w, .x = x, .y = y, .z = z };
+}
+
 test "Math" {
     _ = @import("vec.zig");
     _ = @import("mat.zig");
+    _ = @import("quaternion.zig");
 }

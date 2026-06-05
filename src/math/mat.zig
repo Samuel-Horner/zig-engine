@@ -1,6 +1,7 @@
 const std = @import("std");
 const math = std.math;
 const Vec = @import("vec.zig").Vec;
+const Quaternion = @import("quaternion.zig").Quaternion;
 
 /// Row-major matrix type
 pub fn Mat(comptime T: type, r: comptime_int, c: comptime_int) type {
@@ -291,33 +292,31 @@ pub fn Mat(comptime T: type, r: comptime_int, c: comptime_int) type {
             return res;
         }
 
-        // pub fn fromQuaternion(q: Quaternion(T)) Self {
-        //     comptime {
-        //         if (r != 4 or c != 4) {
-        //             @compileError("fromQuaternion is only defined for 4x4 matrices");
-        //         }
-        //     }
+        pub fn fromQuaternion(q: Quaternion(T)) Self {
+            comptime if (r != 4 or c != 4) {
+                    @compileError("Mat fromQuaternion is only defined for 4x4 matrices.");
+            };
 
-        //     // From https://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm
-        //     var res = Self.identity();
+            // From https://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm
+            var res = Self.identity();
 
-        //     // Row 0
-        //     res.data[0][0] = 1 - 2 * q.y * q.y - 2 * q.z * q.z;
-        //     res.data[0][1] = 2 * q.x * q.y - 2 * q.z * q.w;
-        //     res.data[0][2] = 2 * q.x * q.z + 2 * q.y * q.w;
+            // Row 0
+            res.data[0][0] = 1 - 2 * q.y * q.y - 2 * q.z * q.z;
+            res.data[0][1] = 2 * q.x * q.y - 2 * q.z * q.w;
+            res.data[0][2] = 2 * q.x * q.z + 2 * q.y * q.w;
 
-        //     // Row 1
-        //     res.data[1][0] = 2 * q.x * q.y + 2 * q.z * q.w;
-        //     res.data[1][1] = 1 - 2 * q.x * q.x - 2 * q.z * q.z;
-        //     res.data[1][2] = 2 * q.y * q.z - 2 * q.x * q.w;
+            // Row 1
+            res.data[1][0] = 2 * q.x * q.y + 2 * q.z * q.w;
+            res.data[1][1] = 1 - 2 * q.x * q.x - 2 * q.z * q.z;
+            res.data[1][2] = 2 * q.y * q.z - 2 * q.x * q.w;
 
-        //     // Row 2
-        //     res.data[2][0] = 2 * q.x * q.z - 2 * q.y * q.w;
-        //     res.data[2][1] = 2 * q.y * q.z + 2 * q.x * q.w;
-        //     res.data[2][2] = 1 - 2 * q.x * q.x - 2 * q.y * q.y;
+            // Row 2
+            res.data[2][0] = 2 * q.x * q.z - 2 * q.y * q.w;
+            res.data[2][1] = 2 * q.y * q.z + 2 * q.x * q.w;
+            res.data[2][2] = 1 - 2 * q.x * q.x - 2 * q.y * q.y;
 
-        //     return res;
-        // }
+            return res;
+        }
 
         /// Right-handed lookAt matrix
         pub fn lookAt(eye: Vec(T, 3), target: Vec(T, 3), up: Vec(T, 3)) Self {

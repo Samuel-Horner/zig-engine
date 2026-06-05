@@ -144,9 +144,11 @@ pub fn Vec(comptime T: type, comptime len: comptime_int) type {
         }
 
         pub fn invert(self: Self) Self {
-            return .{
-                .data = .{ -self.data[0], -self.data[1], -self.data[2] },
-            };
+            return .{ .data = .{
+                -self.data[0],
+                -self.data[1],
+                -self.data[2],
+            } };
         }
     };
 }
