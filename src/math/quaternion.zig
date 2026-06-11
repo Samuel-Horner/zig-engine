@@ -1,3 +1,5 @@
+const std = @import("std");
+
 const vec = @import("vec.zig");
 const mat = @import("mat.zig");
 
@@ -137,6 +139,10 @@ pub fn Quaternion(comptime T: type) type {
             return .{ .w = -self.w, .x = -self.x, .y = -self.y, .z = -self.z };
         }
 
+        pub fn length(self: Self) T {
+            return @sqrt(self.w * self.w + self.x * self.x + self.y * self.y + self.z * self.z);
+        }
+
         pub fn norm(self: Self) Self {
             const m = @sqrt(self.w * self.w + self.x * self.x + self.y * self.y + self.z * self.z);
             if (m > 0.0) {
@@ -154,9 +160,27 @@ pub fn Quaternion(comptime T: type) type {
         pub fn dot(lhs: Self, rhs: Self) T {
             return lhs.w * rhs.w + lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
         }
+
+        pub fn rotVec3(v: vec.Vec(T, 3), quat: Self) vec.Vec(T, 3) {
+            const p = Self.fromVec3(0, v);
+            const quat_i = quat.conjugate();
+            const res = quat.mul(p).mul(quat_i);
+            return .{ .data = .{ res.x, res.y, res.z } };
+        }
     };
 }
 
+fn expectQuatEqual(a: Quaternion(f32), b: Quaternion(f32)) !void {
+    const float_tolerance = std.math.floatEps(f32);
+    std.testing.expectApproxEqAbs(b.w, a.w, float_tolerance);
+    std.testing.expectApproxEqAbs(b.x, a.x, float_tolerance);
+    std.testing.expectApproxEqAbs(b.y, a.y, float_tolerance);
+    std.testing.expectApproxEqAbs(b.z, a.z, float_tolerance);
+}
+
 test "Quaternion" {
-    // TODO: Write quaternion tests
+    
+
+    // TODO: Write more quaternion tests
+    
 }

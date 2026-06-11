@@ -221,3 +221,8 @@ pub const GamepadAxis = struct {
     pub const RightTrigger = glfw.GamepadAxisRightTrigger;
     pub const Last = glfw.GamepadAxisLast;
 };
+
+pub const CursorMode = struct {
+    pub const Disabled = glfw.CursorDisabled;
+    pub const Normal = glfw.CursorNormal;
+};

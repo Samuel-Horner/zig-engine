@@ -11,11 +11,36 @@ pub const UBO = @import("ubo.zig").UBO;
 
 pub var window: Window = undefined;
 
-var engine_allocator: std.mem.Allocator = undefined;
+pub var allocator: std.mem.Allocator = undefined;
 var procs: gl.ProcTable = undefined;
 
-pub fn init(allocator: std.mem.Allocator, window_width: c_int, window_height: c_int, name: [*:0]const u8) !void {
-    engine_allocator = allocator;
+// Master callbacks
+fn glfwErrorCallback(error_code: glfw.ErrorCode, description: [*:0]u8) callconv(.c) void {
+    std.log.err("GLFW: ({}) {s}", .{ error_code, description });
+}
+
+// -- Each window instance automatically registers these. They then look at the current window instance to find registered callbacks.
+pub fn glfwCursorPosCallback(_: *c_long, x: f64, y: f64) callconv(.c) void {
+    for (window.cursor_pos_callbacks.items) |callback| {
+        callback(x, y);
+    }
+}
+
+pub fn glfwFrameBufferSizeCallback(_: *c_long, width: c_int, height: c_int) callconv(.c) void {
+    std.log.debug("Resized frame buffer to {}x{}.", .{width, height});
+    window.width = width;
+    window.height = height;
+
+    for (window.frame_buffer_size_callbacks.items) |callback| {
+        callback(width, height);
+    }
+}
+
+// Init
+pub fn init(alloc: std.mem.Allocator, window_width: c_int, window_height: c_int, name: [*:0]const u8) !void {
+    allocator = alloc;
+
+    _ = glfw.setErrorCallback(glfwErrorCallback);
 
     // Init GLFW
     try glfw.init();
@@ -31,10 +56,6 @@ pub fn init(allocator: std.mem.Allocator, window_width: c_int, window_height: c_
 
     glfw.swapInterval(0);
 
-    // _ = glfw.setFramebufferSizeCallback(window.id, glfwGlobalFrameBufferSizeCallback);
-
-    glfw.setInputMode(window.id, glfw.Cursor, glfw.CursorDisabled);
-
     // Bind GL Procs
     if (!procs.init(glfw.getProcAddress)) return error.InitError;
     gl.makeProcTableCurrent(&procs);
@@ -48,9 +69,7 @@ pub fn deinit() void {
     gl.makeProcTableCurrent(null);
 
     glfw.makeContextCurrent(null);
-    window.deinit();
-
-    // size_callbacks.deinit(engine_allocator);
+    window.deinit(allocator);
 
     glfw.terminate();
 }
