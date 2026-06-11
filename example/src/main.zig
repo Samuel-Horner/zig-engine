@@ -3,6 +3,7 @@ const std = @import("std");
 const engine = @import("zig_engine");
 const m = engine.Math;
 
+// Free camera
 const Camera = struct {
     const sensitivity: f32 = 0.05;
     const fov: f32 = 90;
@@ -79,25 +80,24 @@ const Camera = struct {
     }
 };
 
-const Tri = struct {
+// Simple static mesh object
+const SimpleMesh = struct {
     mesh: engine.Object.Mesh,
+
     allocator: std.mem.Allocator,
 
-    pub fn object(self: *Tri) engine.Object {
+    pub fn object(self: *SimpleMesh) engine.Object {
         return engine.Object.init(self, &self.mesh);
     }
 
-    pub fn tick(self: *Tri) void {
+    pub fn tick(self: *SimpleMesh) void {
         _ = self;
     }
 
-    pub fn init(allocator: std.mem.Allocator) !Tri {
-        var self: Tri = .{
-            .mesh = try engine.Object.Mesh.init(allocator, &.{
-                .{ .x = -1, .y = -1, .z = 0, .nx = 0, .ny = 0, .nz = 0 },
-                .{ .x = 1, .y = -1, .z = 0, .nx = 1, .ny = 0, .nz = 0 },
-                .{ .x = 0, .y = 1, .z = 0, .nx = 0, .ny = 1, .nz = 0 },
-            }, &.{ 2, 1, 0 }),
+    pub fn init(allocator: std.mem.Allocator, comptime path: []const u8, pos: m.Vec3) !SimpleMesh {
+        std.log.debug("Parsing OBJ: {s}.", .{path});
+        var self: SimpleMesh = .{
+            .mesh = try engine.Object.Mesh.fromOBJ(allocator, @embedFile(path), 1, pos),
             .allocator = allocator,
         };
 
@@ -105,7 +105,7 @@ const Tri = struct {
         return self;
     }
 
-    pub fn deinit(self: *Tri) void {
+    pub fn deinit(self: *SimpleMesh) void {
         self.mesh.undispatch();
         self.mesh.deinit(self.allocator);
     }
@@ -131,8 +131,11 @@ pub fn main(init: std.process.Init) !void {
     var prog = try engine.Program.init(@embedFile("shader/vert.glsl"), @embedFile("shader/frag.glsl"));
     defer prog.deinit();
 
-    var tri = try Tri.init(init.gpa);
-    defer tri.deinit();
+    var monkey = try SimpleMesh.init(init.gpa, "model/monkey.obj", m.vec3(2, 0, -5));
+    defer monkey.deinit();
+
+    var teapot = try SimpleMesh.init(init.gpa, "model/utah_teapot.obj", m.vec3(-2, -1, -5));
+    defer teapot.deinit();
 
     cam = try Camera.init();
     defer cam.deinit();
@@ -152,7 +155,8 @@ pub fn main(init: std.process.Init) !void {
 
         prog.use();
         cam.renderTick(dt);
-        try tri.object().draw();
+        try teapot.object().draw();
+        try monkey.object().draw();
 
         engine.finishRender();
     }

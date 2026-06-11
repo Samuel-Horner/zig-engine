@@ -47,6 +47,11 @@ pub fn UBO(comptime vals: []const type) type {
             gl.BufferSubData(gl.UNIFORM_BUFFER, offsets[index], @intCast(bytes.len), @ptrCast(bytes));
         }
 
+        pub fn bind(self: *Self) void {
+            gl.BindBuffer(gl.UNIFORM_BUFFER, self.ubo);
+            gl.BindBufferBase(gl.UNIFORM_BUFFER, self.binding, self.ubo);
+        }
+
         pub fn init(binding: u32, opts: struct { draw_mode: c_uint = gl.STATIC_DRAW }) !Self {
             var self: Self = undefined;
 

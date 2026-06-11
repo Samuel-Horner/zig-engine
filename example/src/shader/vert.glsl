@@ -12,8 +12,12 @@ layout (std140, binding = 0) uniform CameraBlock {
     uniform mat4 view;
 };
 
+layout (std140, binding = 1) uniform ModelBlock {
+    uniform mat4 model;
+};
+
 void main() {
-    gl_Position = proj * view * vec4(aVert, 1.);
+    gl_Position = proj * view * model * vec4(aVert, 1.);
     norm = aNorm;
     tex = aTex;
 }

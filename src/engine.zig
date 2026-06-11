@@ -30,6 +30,7 @@ pub fn glfwFrameBufferSizeCallback(_: *c_long, width: c_int, height: c_int) call
     std.log.debug("Resized frame buffer to {}x{}.", .{width, height});
     window.width = width;
     window.height = height;
+    gl.Viewport(0, 0, @intCast(width), @intCast(height));
 
     for (window.frame_buffer_size_callbacks.items) |callback| {
         callback(width, height);
@@ -63,6 +64,8 @@ pub fn init(alloc: std.mem.Allocator, window_width: c_int, window_height: c_int,
 
     // Issue GL Configurations
     gl.ClearColor(1, 0, 1, 1);
+    gl.Enable(gl.DEPTH_TEST);
+    gl.Enable(gl.CULL_FACE);
 }
 
 pub fn deinit() void {
@@ -75,7 +78,7 @@ pub fn deinit() void {
 }
 
 pub fn clearViewport() void {
-    gl.Clear(gl.COLOR_BUFFER_BIT);
+    gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 }
 
 pub fn finishRender() void {
