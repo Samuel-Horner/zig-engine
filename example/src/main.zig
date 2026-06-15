@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const engine = @import("zig_engine");
-const m = engine.Math;
+const m = engine.math;
 
 // Free camera
 const Camera = struct {
@@ -43,12 +43,12 @@ const Camera = struct {
     }
 
     pub fn renderTick(self: *Camera, delta_time: f32) void {
-        if (engine.window.keyPressed(engine.Input.Key.W)) self.pos = self.pos.add(self.dir.muls(delta_time));
-        if (engine.window.keyPressed(engine.Input.Key.S)) self.pos = self.pos.sub(self.dir.muls(delta_time));
-        if (engine.window.keyPressed(engine.Input.Key.D)) self.pos = self.pos.add(self.right.muls(delta_time));
-        if (engine.window.keyPressed(engine.Input.Key.A)) self.pos = self.pos.sub(self.right.muls(delta_time));
-        if (engine.window.keyPressed(engine.Input.Key.Space)) self.pos = self.pos.add(up.muls(delta_time));
-        if (engine.window.keyPressed(engine.Input.Key.LeftControl)) self.pos = self.pos.sub(up.muls(delta_time));
+        if (engine.window.keyPressed(engine.input.Key.W)) self.pos = self.pos.add(self.dir.muls(delta_time));
+        if (engine.window.keyPressed(engine.input.Key.S)) self.pos = self.pos.sub(self.dir.muls(delta_time));
+        if (engine.window.keyPressed(engine.input.Key.D)) self.pos = self.pos.add(self.right.muls(delta_time));
+        if (engine.window.keyPressed(engine.input.Key.A)) self.pos = self.pos.sub(self.right.muls(delta_time));
+        if (engine.window.keyPressed(engine.input.Key.Space)) self.pos = self.pos.add(up.muls(delta_time));
+        if (engine.window.keyPressed(engine.input.Key.LeftControl)) self.pos = self.pos.sub(up.muls(delta_time));
 
         const proj = m.Mat4.perspective(
             std.math.degreesToRadians(fov),
@@ -116,7 +116,7 @@ var cam: Camera = undefined;
 var prevx: f64 = 0;
 var prevy: f64 = 0;
 fn cursorCallback(x: f64, y: f64) void {
-    // Invert both deltas to obtain regular controlls.
+    // Invert both deltas to obtain regular controls.
     cam.rotate(@floatCast(prevx - x), @floatCast(prevy - y));    
 
     prevx = x;
@@ -124,9 +124,12 @@ fn cursorCallback(x: f64, y: f64) void {
 }
 
 pub fn main(init: std.process.Init) !void {
-    try engine.init(init.arena.allocator(), 800, 460, "Hello World");
+    try engine.init(init.arena.allocator(), 1920, 1080, "Hello World");
     defer engine.deinit();
-    engine.window.setInputModeCursor(engine.Input.CursorMode.Disabled);
+    engine.window.setInputModeCursor(engine.input.CursorMode.Disabled);
+
+    // Since this is being passed to a C function, we need to pre-pend the 'src' directory
+    const font = try engine.ui.Font.init("src/font/JetBrainsMonoNerdFont-Regular.ttf", 64);
 
     var prog = try engine.Program.init(@embedFile("shader/vert.glsl"), @embedFile("shader/frag.glsl"));
     defer prog.deinit();
@@ -141,15 +144,31 @@ pub fn main(init: std.process.Init) !void {
     defer cam.deinit();
     try engine.window.registerCursorPosCallback(engine.allocator, cursorCallback);
 
+    var f11_down = false;
+
     var previous = std.Io.Clock.now(.awake, init.io).toNanoseconds();
     while (!engine.window.shouldClose()) {
         const time_stamp = std.Io.Clock.now(.awake, init.io).toNanoseconds();
         const dt: f32 = @floatCast(@as(f128, @floatFromInt(time_stamp - previous)) / 1e9);
         previous = time_stamp;
 
-        if (engine.window.keyPressed(engine.Input.Key.Escape)) {
+        // Input
+        if (engine.window.keyPressed(engine.input.Key.Escape)) {
             engine.window.close();
         }
+
+        if (engine.window.keyPressed(engine.input.Key.F11)) {
+            if (!f11_down) {
+                engine.window.toggleFullScreen();
+                f11_down = true;
+            }
+        } else {
+            f11_down = false;
+        }
+
+        // Debug Info
+        var debug_str_buf: [128]u8 = undefined;
+        const debug_str = std.fmt.bufPrint(&debug_str_buf, "FPS: {d:.3}\nRes: {}x{}", .{1 / dt, engine.window.width, engine.window.height}) catch "Buffer Print Error";
 
         engine.clearViewport();
 
@@ -157,6 +176,8 @@ pub fn main(init: std.process.Init) !void {
         cam.renderTick(dt);
         try teapot.object().draw();
         try monkey.object().draw();
+
+        engine.text_renderer.drawStringRelative(&font, debug_str, m.vec2(0, 1), m.vec3(1, 1, 1), 0.5);
 
         engine.finishRender();
     }

@@ -1,7 +1,7 @@
 const std = @import("std");
 const gl = @import("gl");
-const m = @import("math/root.zig");
-const UBO = @import("ubo.zig").UBO;
+const m = @import("engine.zig").math;
+const UBO = @import("engine.zig").UBO;
 
 pub const Mesh = struct {
     const Vertex = packed struct {

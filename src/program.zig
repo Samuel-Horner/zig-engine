@@ -13,7 +13,7 @@ fn compileShader(shader: c_uint, source: []const u8) !void {
     var success: i32 = undefined;
     gl.GetShaderiv(shader, gl.COMPILE_STATUS, (&success)[0..1]);
     if (success != 1) {
-        var info_log: [512:0]u8 = undefined;
+        var info_log: [1024:0]u8 = undefined;
         gl.GetShaderInfoLog(shader, info_log.len, null, &info_log);
         std.log.err("Shader {} failed to compile.\n{s}", .{ shader, std.mem.sliceTo(&info_log, 0) });
 
@@ -39,7 +39,7 @@ fn linkProgram(self: *Self, vertex_shader: c_uint, fragment_shader: c_uint) !voi
     }
 }
 
-pub fn use(self: *Self) void {
+pub fn use(self: *const Self) void {
     gl.UseProgram(self.id);
 }
 

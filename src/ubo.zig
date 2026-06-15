@@ -2,7 +2,7 @@ const std = @import("std");
 const engine = @import("engine.zig");
 const gl = @import("gl");
 
-const m = engine.Math;
+const m = engine.math;
 
 fn getStd140Size(comptime t: type) comptime_int {
     return 4 * switch (t) {

@@ -1,15 +1,23 @@
 const std = @import("std");
+pub const c = @cImport({
+    @cInclude("ft2build.h");
+    @cInclude("freetype/freetype.h");
+});
 pub const gl = @import("gl");
 pub const glfw = @import("glfw");
 
+// Capitalised since these are structs not modules
 pub const Window = @import("window.zig");
-pub const Input = @import("input.zig");
+pub const input = @import("input.zig");
 pub const Program = @import("program.zig");
 pub const Object = @import("object.zig");
-pub const Math = @import("math/root.zig");
+pub const math = @import("math/root.zig");
 pub const UBO = @import("ubo.zig").UBO;
+pub const ui = @import("ui.zig");
 
 pub var window: Window = undefined;
+
+pub var text_renderer: *ui.TextRenderer = undefined;
 
 pub var allocator: std.mem.Allocator = undefined;
 var procs: gl.ProcTable = undefined;
@@ -22,7 +30,10 @@ fn glfwErrorCallback(error_code: glfw.ErrorCode, description: [*:0]u8) callconv(
 // -- Each window instance automatically registers these. They then look at the current window instance to find registered callbacks.
 pub fn glfwCursorPosCallback(_: *c_long, x: f64, y: f64) callconv(.c) void {
     for (window.cursor_pos_callbacks.items) |callback| {
-        callback(x, y);
+        switch(callback) {
+            .basic => |fun| fun(x, y),
+            .owned => |container| container.fun(container.owner, x, y),
+        }
     }
 }
 
@@ -33,7 +44,10 @@ pub fn glfwFrameBufferSizeCallback(_: *c_long, width: c_int, height: c_int) call
     gl.Viewport(0, 0, @intCast(width), @intCast(height));
 
     for (window.frame_buffer_size_callbacks.items) |callback| {
-        callback(width, height);
+        switch(callback) {
+            .basic => |fun| fun(width, height),
+            .owned => |container| container.fun(container.owner, width, height),
+        }
     }
 }
 
@@ -66,9 +80,15 @@ pub fn init(alloc: std.mem.Allocator, window_width: c_int, window_height: c_int,
     gl.ClearColor(1, 0, 1, 1);
     gl.Enable(gl.DEPTH_TEST);
     gl.Enable(gl.CULL_FACE);
+
+    // Init text module
+    try ui.init();
+    text_renderer = try ui.TextRenderer.init(allocator, @embedFile("shader/text_vert.glsl"), @embedFile("shader/text_frag.glsl"));
 }
 
 pub fn deinit() void {
+    allocator.destroy(text_renderer);
+
     gl.makeProcTableCurrent(null);
 
     glfw.makeContextCurrent(null);

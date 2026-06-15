@@ -12,6 +12,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const zglfw = b.dependency("zglfw", .{});
+    const freetype = b.dependency("freetype", .{});
 
     const zig_engine = b.addModule("zig_engine", .{
         .root_source_file = b.path("src/engine.zig"),
@@ -24,6 +25,7 @@ pub fn build(b: *std.Build) void {
     });
 
     zig_engine.linkSystemLibrary("glfw", .{});
+    zig_engine.linkLibrary(freetype.artifact("freetype"));
 
     const lib = b.addLibrary(.{
         .linkage = .static,
