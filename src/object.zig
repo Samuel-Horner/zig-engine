@@ -64,7 +64,8 @@ pub const Mesh = struct {
         gl.DeleteBuffers(3, &.{ mesh.vao, mesh.vbo, mesh.ebo });
     }
 
-    pub fn fromOBJ(allocator: std.mem.Allocator, src: []const u8, ubo_binding: u32, pos: m.Vec3) !Mesh {
+    /// Non-transposed model matrix
+    pub fn fromOBJ(allocator: std.mem.Allocator, src: []const u8, ubo_binding: u32, model: m.Mat4) !Mesh {
         var data: std.ArrayList(Vertex) = .empty;
         defer data.deinit(allocator);
 
@@ -155,18 +156,22 @@ pub const Mesh = struct {
             }
         }
 
-        return Mesh.init(allocator, data.items, indices.items, ubo_binding, pos);
+        return Mesh.init(allocator, data.items, indices.items, ubo_binding, model);
     }
 
-    pub fn init(allocator: std.mem.Allocator, data: []const Vertex, indices: []const u32, ubo_binding: u32, pos: m.Vec3) !Mesh {
+    pub fn setModelMatrix(self: *const Mesh, model: m.Mat4) void {
+        self.ubo.write(@as([]const f32, @ptrCast(&model.transpose().data)), 0);
+    }
+
+    /// Non-transposed model matrix
+    pub fn init(allocator: std.mem.Allocator, data: []const Vertex, indices: []const u32, ubo_binding: u32, model: m.Mat4) !Mesh {
         var mesh: Mesh = undefined;
 
         mesh.data = try allocator.dupe(Vertex, data);
         mesh.indices = try allocator.dupe(u32, indices);
 
         mesh.ubo = try .init(ubo_binding, .{});
-        const model = m.Mat4.translation(pos.data[0], pos.data[1], pos.data[2]).transpose();
-        mesh.ubo.write(@as([]const f32, @ptrCast(&model.data)), 0);
+        mesh.ubo.write(@as([]const f32, @ptrCast(&model.transpose().data)), 0);
 
         return mesh;
     }

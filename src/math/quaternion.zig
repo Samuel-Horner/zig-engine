@@ -35,10 +35,10 @@ pub fn Quaternion(comptime T: type) type {
             return Self.fromVec3(w, axis.norm().muls(sin_half_angle));
         }
 
-        pub fn fromEulerAngles(v: vec.Vec(3, T), order: enum { xyz, xzy, yxz, yzx, zxy, zyx }) Self {
-            const x = Self.fromAxisAngle(vec.Vec(3, T){ .data = .{ 1, 0, 0 } }, v.data[0]);
-            const y = Self.fromAxisAngle(vec.Vec(3, T){ .data = .{ 0, 1, 0 } }, v.data[1]);
-            const z = Self.fromAxisAngle(vec.Vec(3, T){ .data = .{ 0, 0, 1 } }, v.data[2]);
+        pub fn fromEulerAngles(v: vec.Vec(T, 3), order: enum { xyz, xzy, yxz, yzx, zxy, zyx }) Self {
+            const x = Self.fromAxisAngle(vec.Vec(T, 3){ .data = .{ 1, 0, 0 } }, v.data[0]);
+            const y = Self.fromAxisAngle(vec.Vec(T, 3){ .data = .{ 0, 1, 0 } }, v.data[1]);
+            const z = Self.fromAxisAngle(vec.Vec(T, 3){ .data = .{ 0, 0, 1 } }, v.data[2]);
 
             return switch (order) {
                 .xyz => x.mul(y).mul(z),

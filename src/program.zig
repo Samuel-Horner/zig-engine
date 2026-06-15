@@ -1,6 +1,7 @@
 const std = @import("std");
 const gl = @import("gl");
 const ubo = @import("ubo.zig");
+const m = @import("math/root.zig");
 
 id: c_uint,
 
@@ -41,6 +42,31 @@ fn linkProgram(self: *Self, vertex_shader: c_uint, fragment_shader: c_uint) !voi
 
 pub fn use(self: *const Self) void {
     gl.UseProgram(self.id);
+}
+
+// Uniform Setters
+pub fn setVec2(self: *const Self, name: [*:0]const u8, v: m.Vec2) void {
+    gl.ProgramUniform2fv(self.id, gl.GetUniformLocation(self.id, name), 1, @ptrCast(&v.data));
+}
+
+pub fn setVec3(self: *const Self, name: [*:0]const u8, v: m.Vec3) void {
+    gl.ProgramUniform3fv(self.id, gl.GetUniformLocation(self.id, name), 1, @ptrCast(&v.data));
+}
+
+pub fn setVec4(self: *const Self, name: [*:0]const u8, v: m.Vec4) void {
+    gl.ProgramUniform4fv(self.id, gl.GetUniformLocation(self.id, name), 1, @ptrCast(&v.data));
+}
+
+pub fn setMat2(self: *const Self, name: [*:0]const u8, v: m.Mat2) void {
+    gl.ProgramUniformMatrix2fv(self.id, gl.GetUniformLocation(self.id, name), 1, @ptrCast(&v.data));
+}
+
+pub fn setMat3(self: *const Self, name: [*:0]const u8, v: m.Mat3) void {
+    gl.ProgramUniformMatrix3fv(self.id, gl.GetUniformLocation(self.id, name), 1, @ptrCast(&v.data));
+}
+
+pub fn setMat4(self: *const Self, name: [*:0]const u8, v: m.Mat4) void {
+    gl.ProgramUniformMatrix4fv(self.id, gl.GetUniformLocation(self.id, name), 1, @ptrCast(&v.data));
 }
 
 pub fn init(vertex_source: []const u8, fragment_source: []const u8) !Self {

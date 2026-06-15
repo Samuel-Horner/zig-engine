@@ -394,7 +394,7 @@ pub fn Mat(comptime T: type, r: comptime_int, c: comptime_int) type {
             };
         }
 
-        pub fn translationVec(v: Vec(T, 3)) Self {
+        pub fn translationVec3(v: Vec(T, 3)) Self {
             comptime if (r != 4 or c != 4) {
                 @compileError("Mat translationVec3 is only defined for 4x4 matrices");
             };

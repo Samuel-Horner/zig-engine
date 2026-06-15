@@ -41,7 +41,7 @@ pub fn UBO(comptime vals: []const type) type {
         ubo: u32,
         binding: u32,
 
-        pub fn write(self: *Self, data: anytype, index: usize) void {
+        pub fn write(self: *const Self, data: anytype, index: usize) void {
             const bytes = std.mem.sliceAsBytes(data);
             gl.BindBuffer(gl.UNIFORM_BUFFER, self.ubo);
             gl.BufferSubData(gl.UNIFORM_BUFFER, offsets[index], @intCast(bytes.len), @ptrCast(bytes));

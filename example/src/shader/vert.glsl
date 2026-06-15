@@ -5,7 +5,7 @@ in vec3 aNorm;
 
 out vec3 norm;
 out vec2 tex;
-
+out vec3 frag_pos;
 
 layout (std140, binding = 0) uniform CameraBlock {
     uniform mat4 proj;
@@ -20,4 +20,5 @@ void main() {
     gl_Position = proj * view * model * vec4(aVert, 1.);
     norm = aNorm;
     tex = aTex;
+    frag_pos = (model * vec4(aVert, 1.)).xyz;
 }

@@ -18,7 +18,7 @@ const Camera = struct {
     yaw: f32,
     pitch: f32,
 
-    ubo: engine.UBO(&.{m.Mat4, m.Mat4}),
+    ubo: engine.UBO(&.{ m.Mat4, m.Mat4 }),
 
     // Implements Object
     pub fn object(self: *Camera) engine.Object {
@@ -32,7 +32,7 @@ const Camera = struct {
     pub fn rotate(self: *Camera, dx: f32, dy: f32) void {
         self.yaw = std.math.wrap(self.yaw + dx * sensitivity, 180);
         self.pitch = std.math.clamp(self.pitch + dy * sensitivity, -89, 89);
-        
+
         const yaw_rot = m.Quat.fromAxisAngle(up, std.math.degreesToRadians(self.yaw));
         const pitch_rot = m.Quat.fromAxisAngle(global_right, std.math.degreesToRadians(self.pitch));
         const rot = yaw_rot.mul(pitch_rot);
@@ -94,10 +94,12 @@ const SimpleMesh = struct {
         _ = self;
     }
 
-    pub fn init(allocator: std.mem.Allocator, comptime path: []const u8, pos: m.Vec3) !SimpleMesh {
+    pub fn init(allocator: std.mem.Allocator, comptime path: []const u8, pos: m.Vec3, scale: m.Vec3, rot: m.Quat) !SimpleMesh {
+        const model = m.Mat4.translationVec3(pos).mul(m.Mat4.fromQuaternion(rot)).mul(m.Mat4.scalingVec3(scale));
+
         std.log.debug("Parsing OBJ: {s}.", .{path});
         var self: SimpleMesh = .{
-            .mesh = try engine.Object.Mesh.fromOBJ(allocator, @embedFile(path), 1, pos),
+            .mesh = try engine.Object.Mesh.fromOBJ(allocator, @embedFile(path), 1, model),
             .allocator = allocator,
         };
 
@@ -117,7 +119,7 @@ var prevx: f64 = 0;
 var prevy: f64 = 0;
 fn cursorCallback(x: f64, y: f64) void {
     // Invert both deltas to obtain regular controls.
-    cam.rotate(@floatCast(prevx - x), @floatCast(prevy - y));    
+    cam.rotate(@floatCast(prevx - x), @floatCast(prevy - y));
 
     prevx = x;
     prevy = y;
@@ -134,11 +136,14 @@ pub fn main(init: std.process.Init) !void {
     var prog = try engine.Program.init(@embedFile("shader/vert.glsl"), @embedFile("shader/frag.glsl"));
     defer prog.deinit();
 
-    var monkey = try SimpleMesh.init(init.gpa, "model/monkey.obj", m.vec3(2, 0, -5));
+    var monkey = try SimpleMesh.init(init.gpa, "model/monkey.obj", m.vec3(2, 0, -5), m.vec3(1, 1, 1), m.Quat.identity());
     defer monkey.deinit();
 
-    var teapot = try SimpleMesh.init(init.gpa, "model/utah_teapot.obj", m.vec3(-2, -1, -5));
+    var teapot = try SimpleMesh.init(init.gpa, "model/utah_teapot.obj", m.vec3(-2, -1.5, -5), m.vec3(1, 1, 1), m.Quat.identity());
     defer teapot.deinit();
+
+    // var plane = try SimpleMesh.init(init.gpa, "model/plane.obj", m.vec3(0, -5, 0), m.vec3(100, 1, 100), m.Quat.fromEulerAngles(m.vec3(0, 0, 0), .xyz));
+    // defer plane.deinit();
 
     cam = try Camera.init();
     defer cam.deinit();
@@ -146,11 +151,24 @@ pub fn main(init: std.process.Init) !void {
 
     var f11_down = false;
 
+    var next_debug_update = std.Io.Clock.now(.awake, init.io).toSeconds();
+    var frames: usize = 0;
+    var fps: usize = 0;
+
     var previous = std.Io.Clock.now(.awake, init.io).toNanoseconds();
     while (!engine.window.shouldClose()) {
         const time_stamp = std.Io.Clock.now(.awake, init.io).toNanoseconds();
         const dt: f32 = @floatCast(@as(f128, @floatFromInt(time_stamp - previous)) / 1e9);
         previous = time_stamp;
+
+        frames += 1;
+
+        const now = std.Io.Clock.now(.awake, init.io).toSeconds();
+        if (now >= next_debug_update) {
+            fps = frames;
+            frames = 0;
+            next_debug_update = now + 1;
+        }
 
         // Input
         if (engine.window.keyPressed(engine.input.Key.Escape)) {
@@ -168,16 +186,18 @@ pub fn main(init: std.process.Init) !void {
 
         // Debug Info
         var debug_str_buf: [128]u8 = undefined;
-        const debug_str = std.fmt.bufPrint(&debug_str_buf, "FPS: {d:.3}\nRes: {}x{}", .{1 / dt, engine.window.width, engine.window.height}) catch "Buffer Print Error";
+        const debug_str = std.fmt.bufPrint(&debug_str_buf, "FPS: {}\nRes: {}x{}", .{ fps, engine.window.width, engine.window.height }) catch "Buffer Print Error";
 
         engine.clearViewport();
 
         prog.use();
         cam.renderTick(dt);
+        prog.setVec3("cam_pos", cam.pos);
+        // try plane.object().draw();
         try teapot.object().draw();
         try monkey.object().draw();
 
-        engine.text_renderer.drawStringRelative(&font, debug_str, m.vec2(0, 1), m.vec3(1, 1, 1), 0.5);
+        engine.text_renderer.drawStringRelative(&font, debug_str, m.vec2(0, 1), m.vec3(1, 1, 1), 0.25);
 
         engine.finishRender();
     }
