@@ -17,10 +17,10 @@ pub const ui = @import("ui.zig");
 
 pub var window: Window = undefined;
 
-pub var text_renderer: *ui.TextRenderer = undefined;
-
 pub var allocator: std.mem.Allocator = undefined;
 var procs: gl.ProcTable = undefined;
+
+pub var empty_vao: c_uint = undefined;
 
 // Master callbacks
 fn glfwErrorCallback(error_code: glfw.ErrorCode, description: [*:0]u8) callconv(.c) void {
@@ -81,13 +81,16 @@ pub fn init(alloc: std.mem.Allocator, window_width: c_int, window_height: c_int,
     gl.Enable(gl.DEPTH_TEST);
     gl.Enable(gl.CULL_FACE);
 
+    // Empty VAO used for SSBO based rendering
+    gl.GenVertexArrays(1, (&empty_vao)[0..1]);
+    gl.BindVertexArray(0);
+
     // Init text module
-    try ui.init();
-    text_renderer = try ui.TextRenderer.init(allocator, @embedFile("shader/text_vert.glsl"), @embedFile("shader/text_frag.glsl"));
+    try ui.init(allocator);
 }
 
-pub fn deinit() void {
-    allocator.destroy(text_renderer);
+pub fn deinit() !void {
+    try ui.deinit(allocator);
 
     gl.makeProcTableCurrent(null);
 
