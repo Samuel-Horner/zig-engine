@@ -318,8 +318,8 @@ pub const AtlasTextRenderer = struct {
     color_loc: c_int,
     scale_loc: c_int,
 
-    pub fn updateProj(abstract_self: *anyopaque, width: c_int, height: c_int) void {
-        const self: *AtlasTextRenderer = @ptrCast(@alignCast(abstract_self));
+    pub fn updateProj(generic_self: *anyopaque, width: c_int, height: c_int) void {
+        const self: *AtlasTextRenderer = @ptrCast(@alignCast(generic_self));
 
         const proj: m.Mat4 = m.Mat4.orthographic(0, @floatFromInt(width), 0, @floatFromInt(height), 0, 100).transpose();
 
@@ -412,7 +412,6 @@ pub const AtlasTextRenderer = struct {
         );
     }
 
-    /// Returns a pointer. Remember to free this object.
     pub fn init(allocator: std.mem.Allocator, vertex_source: []const u8, fragment_source: []const u8, buffer_size: usize, bind_point: c_uint) !*AtlasTextRenderer {
         var renderer: *AtlasTextRenderer = try allocator.create(AtlasTextRenderer);
         renderer.prog = try Program.init(vertex_source, fragment_source);
@@ -437,6 +436,7 @@ pub const AtlasTextRenderer = struct {
 
     pub fn deinit(self: *AtlasTextRenderer, allocator: std.mem.Allocator) void {
         allocator.free(self.buffer_prep);
+        allocator.destroy(self);
     }
 };
 
@@ -456,7 +456,6 @@ pub fn init(allocator: std.mem.Allocator, opts: struct { text_buffer_size: usize
 pub fn deinit(allocator: std.mem.Allocator) !void {
     allocator.destroy(text_renderer);
     atlas_text_renderer.deinit(allocator);
-    allocator.destroy(atlas_text_renderer);
 
     if (c.FT_Done_FreeType(ft) != 0) return error.FreeTypeFree;
 }

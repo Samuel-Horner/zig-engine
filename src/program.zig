@@ -45,6 +45,7 @@ pub fn use(self: *const Self) void {
 }
 
 // Uniform Setters
+// These are helper functions. Feel free to directly call engine.gl.ProgramUniform* and store the location seperately for a performance improvement.
 pub fn setVec2(self: *const Self, name: [*:0]const u8, v: m.Vec2) void {
     gl.ProgramUniform2fv(self.id, gl.GetUniformLocation(self.id, name), 1, @ptrCast(&v.data));
 }
@@ -67,6 +68,10 @@ pub fn setMat3(self: *const Self, name: [*:0]const u8, v: m.Mat3) void {
 
 pub fn setMat4(self: *const Self, name: [*:0]const u8, v: m.Mat4) void {
     gl.ProgramUniformMatrix4fv(self.id, gl.GetUniformLocation(self.id, name), 1, @ptrCast(&v.data));
+}
+
+pub fn setFloat(self: *const Self, name: [*:0]const u8, v: f32) void {
+    gl.ProgramUniform1f(self.id, gl.GetUniformLocation(self.id, name), v);
 }
 
 pub fn init(vertex_source: []const u8, fragment_source: []const u8) !Self {

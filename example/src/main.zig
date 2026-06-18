@@ -20,6 +20,9 @@ const Camera = struct {
 
     ubo: engine.UBO(&.{ m.Mat4, m.Mat4 }),
 
+    prevx: f64 = 0,
+    prevy: f64 = 0,
+
     // Implements Object
     pub fn object(self: *Camera) engine.Object {
         return engine.Object.init(self, null);
@@ -62,21 +65,34 @@ const Camera = struct {
         self.ubo.write(@as([]const f32, @ptrCast(&view.data)), 1);
     }
 
-    pub fn init() !Camera {
-        return .{
-            .pos = m.vec3(0, 0, 1),
-            .dir = in,
-            .right = m.vec3(1, 0, 0),
+    pub fn cursorCallback(generic_self: *anyopaque, x: f64, y: f64) void {
+        const self: *Camera = @ptrCast(@alignCast(generic_self));
 
-            .yaw = 0,
-            .pitch = 0,
+        // Inverting both axis to obtain normal controls
+        self.rotate(@floatCast(self.prevx - x), @floatCast(self.prevy - y));
 
-            .ubo = try .init(0, .{}),
-        };
+        self.prevx = x;
+        self.prevy = y;
     }
 
-    pub fn deinit(self: *Camera) void {
+    pub fn init(allocator: std.mem.Allocator) !*Camera {
+        var cam = try allocator.create(Camera);
+        cam.pos = m.vec3(0, 0, 1);
+        cam.dir = in;
+        cam.right = m.vec3(1, 0, 0);
+
+        cam.yaw = 0;
+        cam.pitch = 0;
+
+        cam.ubo = try .init(0, .{});
+
+        try engine.window.registerCursorPosCallbackOwned(engine.allocator, cam, Camera.cursorCallback);
+        return cam;
+    }
+
+    pub fn deinit(self: *Camera, allocator: std.mem.Allocator) void {
         self.ubo.deinit();
+        allocator.destroy(self);
     }
 };
 
@@ -113,23 +129,11 @@ const SimpleMesh = struct {
     }
 };
 
-var cam: Camera = undefined;
-
-var prevx: f64 = 0;
-var prevy: f64 = 0;
-fn cursorCallback(x: f64, y: f64) void {
-    // Invert both deltas to obtain regular controls.
-    cam.rotate(@floatCast(prevx - x), @floatCast(prevy - y));
-
-    prevx = x;
-    prevy = y;
-}
-
 pub fn main(init: std.process.Init) !void {
     try engine.init(init.arena.allocator(), 1920, 1080, "Hello World", .{});
     defer engine.deinit() catch std.log.err("Failed to deinit engine.", .{});
     engine.window.setInputModeCursor(engine.input.CursorMode.Disabled);
-    
+
     const atlas_font = try engine.ui.AtlasFont.init(engine.allocator, "src/font/JetBrainsMonoNerdFont-Regular.ttf", 64);
 
     var prog = try engine.Program.init(@embedFile("shader/vert.glsl"), @embedFile("shader/frag.glsl"));
@@ -141,9 +145,11 @@ pub fn main(init: std.process.Init) !void {
     var teapot = try SimpleMesh.init(init.gpa, "model/utah_teapot.obj", m.vec3(-2, -1.5, -5), m.vec3(1, 1, 1), m.Quat.identity());
     defer teapot.deinit();
 
-    cam = try Camera.init();
-    defer cam.deinit();
-    try engine.window.registerCursorPosCallback(engine.allocator, cursorCallback);
+    // Cam is a pointer type here since we heap allocate it.
+    // This is a necessary downside of registering an owned callback in a initialisation function.
+    // You can stack allocate structs with owned callbacks, but you must register the callback outside the initialiser to avoid dead pointers.
+    var cam: *Camera = try Camera.init(init.gpa);
+    defer cam.deinit(init.gpa);
 
     var f11_down = false;
 
@@ -183,10 +189,12 @@ pub fn main(init: std.process.Init) !void {
         var debug_str_buf: [256]u8 = undefined;
         const debug_str = std.fmt.bufPrint(&debug_str_buf, "FPS: {}\nRes: {}x{}", .{ fps, engine.window.width, engine.window.height }) catch "Buffer Print Error";
 
+        cam.renderTick(dt);
+
         engine.clearViewport();
 
         prog.use();
-        cam.renderTick(dt);
+        cam.ubo.bind();
         prog.setVec3("cam_pos", cam.pos);
         try teapot.object().draw();
         try monkey.object().draw();
