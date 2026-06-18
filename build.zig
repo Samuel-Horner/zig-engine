@@ -11,8 +11,7 @@ pub fn build(b: *std.Build) void {
         .extensions = &.{},
     });
 
-    const zglfw = b.dependency("zglfw", .{});
-    const freetype = b.dependency("freetype", .{});
+    const zglfw = b.dependency("zglfw", .{ .target = target, .optimize = optimize });
 
     const zig_engine = b.addModule("zig_engine", .{
         .root_source_file = b.path("src/engine.zig"),
@@ -24,8 +23,9 @@ pub fn build(b: *std.Build) void {
         },
     });
 
+    // TODO: Move away from system glfw and freetype
     zig_engine.linkSystemLibrary("glfw", .{});
-    zig_engine.linkLibrary(freetype.artifact("freetype"));
+    zig_engine.linkSystemLibrary("freetype2", .{});
 
     const lib = b.addLibrary(.{
         .linkage = .static,

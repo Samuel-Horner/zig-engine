@@ -6,5 +6,16 @@ uniform sampler2D tex;
 uniform vec3 text_color;
 
 void main() {
-    color = vec4(text_color, texture(tex, tex_coords).r);
+    const float alpha = texture(tex, tex_coords).r;
+    color = vec4(text_color, max(0, alpha - 0.5) * 2);
+    // Fixes ghosting issue by clamping alpha to
+    // |                    /
+    // |                   /
+    // |                  /
+    // |                 /
+    // |
+    // |
+    // |_________________
+    // +---------------------------------------
+    //                  0.5
 }

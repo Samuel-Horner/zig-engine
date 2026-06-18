@@ -126,11 +126,11 @@ fn cursorCallback(x: f64, y: f64) void {
 }
 
 pub fn main(init: std.process.Init) !void {
-    try engine.init(init.arena.allocator(), 1920, 1080, "Hello World");
+    try engine.init(init.arena.allocator(), 1920, 1080, "Hello World", .{});
     defer engine.deinit() catch std.log.err("Failed to deinit engine.", .{});
     engine.window.setInputModeCursor(engine.input.CursorMode.Disabled);
     
-    const atlas_font = try engine.ui.AtlasFont.init(engine.allocator, "src/font/JetBrainsMonoNerdFont-Regular.ttf", 32);
+    const atlas_font = try engine.ui.AtlasFont.init(engine.allocator, "src/font/JetBrainsMonoNerdFont-Regular.ttf", 64);
 
     var prog = try engine.Program.init(@embedFile("shader/vert.glsl"), @embedFile("shader/frag.glsl"));
     defer prog.deinit();
@@ -140,9 +140,6 @@ pub fn main(init: std.process.Init) !void {
 
     var teapot = try SimpleMesh.init(init.gpa, "model/utah_teapot.obj", m.vec3(-2, -1.5, -5), m.vec3(1, 1, 1), m.Quat.identity());
     defer teapot.deinit();
-
-    // var plane = try SimpleMesh.init(init.gpa, "model/plane.obj", m.vec3(0, -5, 0), m.vec3(100, 1, 100), m.Quat.fromEulerAngles(m.vec3(0, 0, 0), .xyz));
-    // defer plane.deinit();
 
     cam = try Camera.init();
     defer cam.deinit();
@@ -183,7 +180,6 @@ pub fn main(init: std.process.Init) !void {
             f11_down = false;
         }
 
-        // Debug Info
         var debug_str_buf: [256]u8 = undefined;
         const debug_str = std.fmt.bufPrint(&debug_str_buf, "FPS: {}\nRes: {}x{}", .{ fps, engine.window.width, engine.window.height }) catch "Buffer Print Error";
 
@@ -192,11 +188,9 @@ pub fn main(init: std.process.Init) !void {
         prog.use();
         cam.renderTick(dt);
         prog.setVec3("cam_pos", cam.pos);
-        // try plane.object().draw();
         try teapot.object().draw();
         try monkey.object().draw();
 
-        // engine.ui.text_renderer.drawStringRelative(&font, debug_str, m.vec2(0, 1), m.vec3(1, 1, 1), 0.25);
         try engine.ui.atlas_text_renderer.drawStringRelative(&atlas_font, debug_str, m.vec2(0, 1), m.vec3(1, 1, 1), 1);
 
         engine.finishRender();

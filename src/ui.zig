@@ -242,7 +242,7 @@ pub const TextRenderer = struct {
     }
 
     pub fn drawStringRelative(self: *const TextRenderer, font: *const Font, str: []const u8, pos: m.Vec2, color: m.Vec3, scale: f32) void {
-        const s = scale * @as(f32, @floatFromInt(engine.window.width)) / 1080;
+        const s = scale * @as(f32, @floatFromInt(engine.window.width)) / 1920;
 
         self.drawString(
             font,
@@ -291,17 +291,17 @@ pub const AtlasTextRenderer = struct {
     /// Known issues:
     ///     - Ghosting artifacts around glyph borders at some resolution / height mismatches
     const BufferItem = packed struct {
-        x: f32,
-        y: f32,
+        x: f32 = 0,
+        y: f32 = 0,
 
-        width: f32,
-        height: f32,
+        width: f32 = 0,
+        height: f32 = 0,
 
-        tex_orig_x: f32,
-        tex_orig_y: f32,
+        tex_orig_x: f32 = 0,
+        tex_orig_y: f32 = 0,
 
-        tex_width: f32,
-        tex_height: f32,
+        tex_width: f32 = 0,
+        tex_height: f32 = 0,
     };
 
     const buffer_item_size = @sizeOf(BufferItem);
@@ -311,6 +311,8 @@ pub const AtlasTextRenderer = struct {
     ssbo: c_uint,
     bind_point: c_uint,
     buffer_size: usize,
+
+    buffer_prep: []BufferItem,
 
     proj_loc: c_int,
     color_loc: c_int,
@@ -325,8 +327,10 @@ pub const AtlasTextRenderer = struct {
         gl.UniformMatrix4fv(self.proj_loc, 1, gl.FALSE, @ptrCast(&proj.data));
     }
 
-    pub fn drawStringBuffer(self: *const AtlasTextRenderer, font: *const AtlasFont, str: []const u8, pos: m.Vec2, color: m.Vec3, scale: f32) !m.Vec2 {
-        if (str.len > self.buffer_size) { return error.StringOverflowsBuffer; }
+    pub fn drawStringBuffer(self: *const AtlasTextRenderer, font: *const AtlasFont, str: []const u8, pos: m.Vec2, global_pos: m.Vec2, color: m.Vec3, scale: f32) !m.Vec2 {
+        if (str.len > self.buffer_size) {
+            return error.StringOverflowsBuffer;
+        }
 
         self.prog.use();
         gl.Uniform3f(self.color_loc, color.data[0], color.data[1], color.data[2]);
@@ -344,7 +348,9 @@ pub const AtlasTextRenderer = struct {
         for (str, 0..) |char, i| {
             if (char == '\n') {
                 y = y - @as(f32, @floatFromInt(font.line_height)) * scale;
-                x = pos.data[0];
+                x = global_pos.data[0];
+                // Empty Slot
+                self.buffer_prep[i] = .{};
                 continue;
             }
 
@@ -367,10 +373,14 @@ pub const AtlasTextRenderer = struct {
                 .tex_height = @as(f32, @floatFromInt(ch.size.data[1])) / @as(f32, @floatFromInt(font.tex_size.data[1])),
             };
 
-            gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, @intCast(i * buffer_item_size), @intCast(buffer_item_size), &item);
+            // gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, @intCast(i * buffer_item_size), @intCast(buffer_item_size), &item);
+            self.buffer_prep[i] = item;
 
             x += @as(f32, @floatFromInt((ch.advance >> 6))) * scale;
         }
+
+        const bytes = std.mem.sliceAsBytes(self.buffer_prep);
+        gl.BufferSubData(gl.SHADER_STORAGE_BUFFER, 0, @intCast(buffer_item_size * str.len), bytes.ptr);
 
         // Draw 6 * #chars verts
         gl.DrawArrays(gl.TRIANGLES, 0, @intCast(str.len * 6));
@@ -383,12 +393,12 @@ pub const AtlasTextRenderer = struct {
         var iter = std.mem.window(u8, str, self.buffer_size, self.buffer_size);
         var i_pos: m.Vec2 = pos;
         while (iter.next()) |slice| {
-            i_pos = try self.drawStringBuffer(font, slice, i_pos, color, scale);
+            i_pos = try self.drawStringBuffer(font, slice, i_pos, pos, color, scale);
         }
     }
 
     pub fn drawStringRelative(self: *const AtlasTextRenderer, font: *const AtlasFont, str: []const u8, pos: m.Vec2, color: m.Vec3, scale: f32) !void {
-        const s = scale * @as(f32, @floatFromInt(engine.window.width)) / 1920;
+        const s = scale * (@as(f32, @floatFromInt(engine.window.width)) / 1920) * (32 / @as(f32, @floatFromInt(font.line_height)));
 
         try self.drawString(
             font,
@@ -409,6 +419,7 @@ pub const AtlasTextRenderer = struct {
 
         renderer.buffer_size = buffer_size;
         renderer.bind_point = bind_point;
+        renderer.buffer_prep = try allocator.alloc(BufferItem, buffer_size);
 
         renderer.proj_loc = gl.GetUniformLocation(renderer.prog.id, "proj");
         updateProj(renderer, engine.window.width, engine.window.height);
@@ -423,9 +434,13 @@ pub const AtlasTextRenderer = struct {
 
         return renderer;
     }
+
+    pub fn deinit(self: *AtlasTextRenderer, allocator: std.mem.Allocator) void {
+        allocator.free(self.buffer_prep);
+    }
 };
 
-pub fn init(allocator: std.mem.Allocator) !void {
+pub fn init(allocator: std.mem.Allocator, opts: struct { text_buffer_size: usize = 256 }) !void {
     if (c.FT_Init_FreeType(&ft) != 0) return error.FreeTypeInit;
 
     var major: c_int = undefined;
@@ -435,11 +450,12 @@ pub fn init(allocator: std.mem.Allocator) !void {
     std.log.debug("Initialised FreeType {}.{}.{}.", .{ major, minor, patch });
 
     text_renderer = try TextRenderer.init(allocator, @embedFile("shader/text_vert.glsl"), @embedFile("shader/text_frag.glsl"));
-    atlas_text_renderer = try AtlasTextRenderer.init(allocator, @embedFile("shader/atlas_text_vert.glsl"), @embedFile("shader/atlas_text_frag.glsl"), 128, 0);
+    atlas_text_renderer = try AtlasTextRenderer.init(allocator, @embedFile("shader/atlas_text_vert.glsl"), @embedFile("shader/atlas_text_frag.glsl"), opts.text_buffer_size, 0);
 }
 
 pub fn deinit(allocator: std.mem.Allocator) !void {
     allocator.destroy(text_renderer);
+    atlas_text_renderer.deinit(allocator);
     allocator.destroy(atlas_text_renderer);
 
     if (c.FT_Done_FreeType(ft) != 0) return error.FreeTypeFree;

@@ -30,7 +30,7 @@ fn glfwErrorCallback(error_code: glfw.ErrorCode, description: [*:0]u8) callconv(
 // -- Each window instance automatically registers these. They then look at the current window instance to find registered callbacks.
 pub fn glfwCursorPosCallback(_: *c_long, x: f64, y: f64) callconv(.c) void {
     for (window.cursor_pos_callbacks.items) |callback| {
-        switch(callback) {
+        switch (callback) {
             .basic => |fun| fun(x, y),
             .owned => |container| container.fun(container.owner, x, y),
         }
@@ -38,13 +38,13 @@ pub fn glfwCursorPosCallback(_: *c_long, x: f64, y: f64) callconv(.c) void {
 }
 
 pub fn glfwFrameBufferSizeCallback(_: *c_long, width: c_int, height: c_int) callconv(.c) void {
-    std.log.debug("Resized frame buffer to {}x{}.", .{width, height});
+    std.log.debug("Resized frame buffer to {}x{}.", .{ width, height });
     window.width = width;
     window.height = height;
     gl.Viewport(0, 0, @intCast(width), @intCast(height));
 
     for (window.frame_buffer_size_callbacks.items) |callback| {
-        switch(callback) {
+        switch (callback) {
             .basic => |fun| fun(width, height),
             .owned => |container| container.fun(container.owner, width, height),
         }
@@ -52,7 +52,11 @@ pub fn glfwFrameBufferSizeCallback(_: *c_long, width: c_int, height: c_int) call
 }
 
 // Init
-pub fn init(alloc: std.mem.Allocator, window_width: c_int, window_height: c_int, name: [*:0]const u8) !void {
+pub fn init(alloc: std.mem.Allocator, window_width: c_int, window_height: c_int, name: [*:0]const u8, opts: struct {
+    /// Controls text buffer size in atlas rendering mode
+    /// Every tex_buffer_size characters is rendered with a single draw call
+    text_buffer_size: usize = 256,
+}) !void {
     allocator = alloc;
 
     _ = glfw.setErrorCallback(glfwErrorCallback);
@@ -86,7 +90,7 @@ pub fn init(alloc: std.mem.Allocator, window_width: c_int, window_height: c_int,
     gl.BindVertexArray(0);
 
     // Init text module
-    try ui.init(allocator);
+    try ui.init(allocator, .{ .text_buffer_size = opts.text_buffer_size });
 }
 
 pub fn deinit() !void {
@@ -112,7 +116,6 @@ pub fn finishRender() void {
 test "unit" {
     _ = @import("math/root.zig");
 }
-
 
 // // Allows for uniform function declaration with struct ownership.
 // pub const UniformFunction = union {
