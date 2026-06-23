@@ -63,14 +63,22 @@ pub fn close(self: *const Self) void {
     glfw.setWindowShouldClose(self.id, true);
 }
 
+pub fn fullScreen(self: *const Self) void {
+    const monitor = glfw.getPrimaryMonitor();
+    const mode = glfw.getVideoMode(monitor);
+
+    glfw.setWindowMonitor(self.id, monitor, 0, 0, mode.?.width, mode.?.height, mode.?.refreshRate);
+}
+
+pub fn windowed(self: *const Self, x: c_int, y: c_int, width: c_int, height: c_int) void {
+    glfw.setWindowMonitor(self.id, null, x, y, width, height, 0);
+}
+
 pub fn toggleFullScreen(self: *const Self) void {
     if (glfw.getWindowMonitor(self.id) == null) {
-        const monitor = glfw.getPrimaryMonitor();
-        const mode = glfw.getVideoMode(monitor);
-
-        glfw.setWindowMonitor(self.id, monitor, 0, 0, mode.?.width, mode.?.height, mode.?.refreshRate);
+        self.fullScreen();
     } else {
-        glfw.setWindowMonitor(self.id, null, 0, 0, 800, 460, 0);
+        self.windowed(0, 0, 800, 460);
     }
 }
 

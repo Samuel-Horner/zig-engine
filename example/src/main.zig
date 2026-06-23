@@ -4,98 +4,6 @@ const engine = @import("zig_engine");
 const m = engine.math;
 
 // Free camera
-const Camera = struct {
-    const sensitivity: f32 = 0.05;
-    const fov: f32 = 90;
-    const up = m.vec3(0, 1, 0);
-    const global_right = m.vec3(1, 0, 0);
-    const in = m.vec3(0, 0, -1);
-
-    pos: m.Vec3,
-    dir: m.Vec3,
-    right: m.Vec3,
-
-    yaw: f32,
-    pitch: f32,
-
-    ubo: engine.UBO(&.{ m.Mat4, m.Mat4 }),
-
-    prevx: f64 = 0,
-    prevy: f64 = 0,
-
-    // Implements Object
-    pub fn object(self: *Camera) engine.Object {
-        return engine.Object.init(self, null);
-    }
-
-    pub fn tick(self: *Camera) !void {
-        _ = self;
-    }
-
-    pub fn rotate(self: *Camera, dx: f32, dy: f32) void {
-        self.yaw = std.math.wrap(self.yaw + dx * sensitivity, 180);
-        self.pitch = std.math.clamp(self.pitch + dy * sensitivity, -89, 89);
-
-        const yaw_rot = m.Quat.fromAxisAngle(up, std.math.degreesToRadians(self.yaw));
-        const pitch_rot = m.Quat.fromAxisAngle(global_right, std.math.degreesToRadians(self.pitch));
-        const rot = yaw_rot.mul(pitch_rot);
-
-        self.dir = m.Quat.rotVec3(in, rot.norm()).norm();
-
-        self.right = self.dir.cross(up).norm();
-    }
-
-    pub fn renderTick(self: *Camera, delta_time: f32) void {
-        if (engine.window.keyPressed(engine.input.Key.W)) self.pos = self.pos.add(self.dir.muls(delta_time));
-        if (engine.window.keyPressed(engine.input.Key.S)) self.pos = self.pos.sub(self.dir.muls(delta_time));
-        if (engine.window.keyPressed(engine.input.Key.D)) self.pos = self.pos.add(self.right.muls(delta_time));
-        if (engine.window.keyPressed(engine.input.Key.A)) self.pos = self.pos.sub(self.right.muls(delta_time));
-        if (engine.window.keyPressed(engine.input.Key.Space)) self.pos = self.pos.add(up.muls(delta_time));
-        if (engine.window.keyPressed(engine.input.Key.LeftControl)) self.pos = self.pos.sub(up.muls(delta_time));
-
-        const proj = m.Mat4.perspective(
-            std.math.degreesToRadians(fov),
-            @as(f32, @floatFromInt(engine.window.width)) / @as(f32, @floatFromInt(engine.window.height)),
-            0.1,
-            1000,
-        ).transpose();
-        const view = m.Mat4.lookAt(self.pos, self.pos.add(self.dir), m.vec3(0, 1, 0)).transpose();
-
-        self.ubo.write(@as([]const f32, @ptrCast(&proj.data)), 0);
-        self.ubo.write(@as([]const f32, @ptrCast(&view.data)), 1);
-    }
-
-    pub fn cursorCallback(generic_self: *anyopaque, x: f64, y: f64) void {
-        const self: *Camera = @ptrCast(@alignCast(generic_self));
-
-        // Inverting both axis to obtain normal controls
-        self.rotate(@floatCast(self.prevx - x), @floatCast(self.prevy - y));
-
-        self.prevx = x;
-        self.prevy = y;
-    }
-
-    pub fn init(allocator: std.mem.Allocator) !*Camera {
-        var cam = try allocator.create(Camera);
-        cam.pos = m.vec3(0, 0, 1);
-        cam.dir = in;
-        cam.right = m.vec3(1, 0, 0);
-
-        cam.yaw = 0;
-        cam.pitch = 0;
-
-        cam.ubo = try .init(0, .{});
-
-        try engine.window.registerCursorPosCallbackOwned(engine.allocator, cam, Camera.cursorCallback);
-        return cam;
-    }
-
-    pub fn deinit(self: *Camera, allocator: std.mem.Allocator) void {
-        self.ubo.deinit();
-        allocator.destroy(self);
-    }
-};
-
 // Simple static mesh object
 const SimpleMesh = struct {
     mesh: engine.Object.Mesh,
@@ -133,6 +41,7 @@ pub fn main(init: std.process.Init) !void {
     try engine.init(init.arena.allocator(), 1920, 1080, "Hello World", .{});
     defer engine.deinit() catch std.log.err("Failed to deinit engine.", .{});
     engine.window.setInputModeCursor(engine.input.CursorMode.Disabled);
+    engine.window.fullScreen();
 
     const atlas_font = try engine.ui.AtlasFont.init(engine.allocator, "src/font/JetBrainsMonoNerdFont-Regular.ttf", 64);
 
@@ -148,7 +57,7 @@ pub fn main(init: std.process.Init) !void {
     // Cam is a pointer type here since we heap allocate it.
     // This is a necessary downside of registering an owned callback in a initialisation function.
     // You can stack allocate structs with owned callbacks, but you must register the callback outside the initialiser to avoid dead pointers.
-    var cam: *Camera = try Camera.init(init.gpa);
+    var cam = try engine.Object.FPCamera.init(init.gpa, 0.05, 0);
     defer cam.deinit(init.gpa);
 
     var f11_down = false;
@@ -186,10 +95,17 @@ pub fn main(init: std.process.Init) !void {
             f11_down = false;
         }
 
-        var debug_str_buf: [256]u8 = undefined;
-        const debug_str = std.fmt.bufPrint(&debug_str_buf, "FPS: {}\nRes: {}x{}", .{ fps, engine.window.width, engine.window.height }) catch "Buffer Print Error";
+        if (engine.window.keyPressed(engine.input.Key.W)) cam.pos = cam.pos.add(cam.dir.muls(dt));
+        if (engine.window.keyPressed(engine.input.Key.S)) cam.pos = cam.pos.sub(cam.dir.muls(dt));
+        if (engine.window.keyPressed(engine.input.Key.D)) cam.pos = cam.pos.add(cam.right.muls(dt));
+        if (engine.window.keyPressed(engine.input.Key.A)) cam.pos = cam.pos.sub(cam.right.muls(dt));
+        if (engine.window.keyPressed(engine.input.Key.Space)) cam.pos = cam.pos.add(engine.Object.FPCamera.global_up.muls(dt));
+        if (engine.window.keyPressed(engine.input.Key.LeftControl)) cam.pos = cam.pos.sub(engine.Object.FPCamera.global_up.muls(dt));
 
-        cam.renderTick(dt);
+        var debug_str_buf: [256]u8 = undefined;
+        const debug_str = std.fmt.bufPrint(&debug_str_buf, "fps:{}\nres:{}x{}\nx:{d:.3} y:{d:.3} z:{d:.3}\np:{d:.3} y:{d:.3}", .{ fps, engine.window.width, engine.window.height, cam.pos.data[0], cam.pos.data[1], cam.pos.data[2], cam.pitch, cam.yaw }) catch "Buffer Print Error";
+
+        cam.renderTick();
 
         engine.clearViewport();
 

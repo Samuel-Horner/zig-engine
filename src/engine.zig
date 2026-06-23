@@ -10,7 +10,7 @@ pub const glfw = @import("glfw");
 pub const Window = @import("window.zig");
 pub const input = @import("input.zig");
 pub const Program = @import("program.zig");
-pub const Object = @import("object.zig");
+pub const Object = @import("object/root.zig");
 pub const math = @import("math/root.zig");
 pub const UBO = @import("ubo.zig").UBO;
 pub const ui = @import("ui.zig");
@@ -79,6 +79,7 @@ pub fn init(alloc: std.mem.Allocator, window_width: c_int, window_height: c_int,
     if (!procs.init(glfw.getProcAddress)) return error.InitError;
     gl.makeProcTableCurrent(&procs);
     std.log.debug("Loaded OpenGL {s} {}.{}.", .{ @tagName(gl.info.profile orelse "unkown"), gl.info.version_major, gl.info.version_minor });
+    std.log.debug("Renderer: {?s}", .{gl.GetString(gl.RENDERER)});
 
     // Issue GL Configurations
     gl.ClearColor(1, 0, 1, 1);

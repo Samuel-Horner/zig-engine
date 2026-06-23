@@ -52,7 +52,7 @@ pub fn UBO(comptime vals: []const type) type {
             gl.BindBufferBase(gl.UNIFORM_BUFFER, self.binding, self.ubo);
         }
 
-        pub fn init(binding: u32, opts: struct { draw_mode: c_uint = gl.STATIC_DRAW }) !Self {
+        pub fn init(binding: u32, opts: struct { draw_mode: c_uint = gl.DYNAMIC_DRAW }) !Self {
             var self: Self = undefined;
 
             self.binding = binding;

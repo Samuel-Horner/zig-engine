@@ -1,7 +1,9 @@
 const std = @import("std");
 const gl = @import("gl");
-const m = @import("engine.zig").math;
-const UBO = @import("engine.zig").UBO;
+const m = @import("../engine.zig").math;
+const UBO = @import("../engine.zig").UBO;
+
+pub const FPCamera = @import("fp_camera.zig");
 
 pub const Mesh = struct {
     const Vertex = packed struct {
@@ -114,7 +116,7 @@ pub const Mesh = struct {
                 try norms.append(allocator, m.vec3(x, y, z));
             } else if (std.mem.eql(u8, indicator, "f")) {
                 // Face
-                while(value_iter.next()) |vert_buf| {
+                while (value_iter.next()) |vert_buf| {
                     var index = defined_verts.get(vert_buf);
                     if (index == null) {
                         // Create vertex

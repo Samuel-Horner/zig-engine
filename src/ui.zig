@@ -10,6 +10,9 @@ var ft: c.FT_Library = undefined;
 pub var text_renderer: *TextRenderer = undefined;
 pub var atlas_text_renderer: *AtlasTextRenderer = undefined;
 
+// TODO: Look into using HarfBuzz to handle this.
+// https://harfbuzz-world.cc/#gpu
+
 pub const Font = struct {
     const Character = struct {
         tex_id: u32,
