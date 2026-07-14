@@ -290,7 +290,7 @@ pub const TextRenderer = struct {
 };
 
 pub const AtlasTextRenderer = struct {
-    /// Better, more performant (maybe), text renderer.
+    /// Better, more performant, text renderer.
     /// Known issues:
     ///     - Ghosting artifacts around glyph borders at some resolution / height mismatches
     const BufferItem = packed struct {

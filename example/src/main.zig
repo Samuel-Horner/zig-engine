@@ -3,7 +3,6 @@ const std = @import("std");
 const engine = @import("zig_engine");
 const m = engine.math;
 
-// Free camera
 // Simple static mesh object
 const SimpleMesh = struct {
     mesh: engine.Object.Mesh,
@@ -60,6 +59,10 @@ pub fn main(init: std.process.Init) !void {
     var cam = try engine.Object.FPCamera.init(init.gpa, 0.05, 0);
     defer cam.deinit(init.gpa);
 
+    prog.use();
+    const light_dir = m.vec3(-0.5, -0.5, -0.5).norm().invert();
+    prog.setVec3("light_dir", light_dir);
+
     var f11_down = false;
 
     var next_debug_update = std.Io.Clock.now(.awake, init.io).toSeconds();
@@ -75,10 +78,10 @@ pub fn main(init: std.process.Init) !void {
         frames += 1;
 
         const now = std.Io.Clock.now(.awake, init.io).toSeconds();
-        if (now >= next_debug_update) {
+        if (now > next_debug_update) {
             fps = frames;
             frames = 0;
-            next_debug_update = now + 1;
+            next_debug_update = now;
         }
 
         // Input

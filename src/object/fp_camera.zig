@@ -84,6 +84,9 @@ pub fn init(allocator: std.mem.Allocator, sensitivity: f32, ubo_binding: u32) !*
     cam.fov = 90;
     cam.near = 0.1;
     cam.far = 1000;
+
+    cam.pitch = 0;
+    cam.yaw = 0;
         
     cam.pos = m.vec3(0, 0, 1);
     cam.dir = global_in;
