@@ -42,7 +42,7 @@ pub fn main(init: std.process.Init) !void {
     engine.window.setInputModeCursor(engine.input.CursorMode.Disabled);
     engine.window.fullScreen();
 
-    const atlas_font = try engine.ui.AtlasFont.init(engine.allocator, "src/font/JetBrainsMonoNerdFont-Regular.ttf", 64);
+    const font = try engine.ui.Font.init(engine.allocator, "src/font/JetBrainsMonoNerdFont-Regular.ttf", 64);
 
     var prog = try engine.Program.init(@embedFile("shader/vert.glsl"), @embedFile("shader/frag.glsl"));
     defer prog.deinit();
@@ -118,7 +118,7 @@ pub fn main(init: std.process.Init) !void {
         try teapot.object().draw();
         try monkey.object().draw();
 
-        try engine.ui.atlas_text_renderer.drawStringRelative(&atlas_font, debug_str, m.vec2(0, 1), m.vec3(1, 1, 1), 1);
+        try engine.ui.text_renderer.drawStringRelative(&font, debug_str, m.vec2(0, 1), m.vec3(1, 1, 1), 1);
 
         engine.finishRender();
     }
