@@ -21,17 +21,16 @@ pub fn UBO(comptime vals: []const type) type {
         var arr: [vals.len]isize = undefined;
         arr[0] = 0;
         for (vals[0 .. vals.len - 1], 1..) |val, i| {
-            arr[i] = getStd140Size(val);
+            arr[i] = getStd140Size(val) + arr[i - 1];
         }
         break :offsets arr;
     };
 
     const size = comptime size: {
         var sum = 0;
-        for (offsets) |offset| {
-            sum += offset;
+        for (vals) |val| {
+            sum += getStd140Size(val);
         }
-        sum += getStd140Size(vals[vals.len - 1]);
         break :size sum;
     };
 
