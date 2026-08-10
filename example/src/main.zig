@@ -42,6 +42,9 @@ pub fn main(init: std.process.Init) !void {
     engine.window.setInputModeCursor(engine.input.CursorMode.Disabled);
     engine.window.fullScreen();
 
+    // TODO: REMOVE
+    // if (true) return;
+
     const font = try engine.ui.Font.init(engine.allocator, "src/font/JetBrainsMonoNerdFont-Regular.ttf", 64);
 
     var prog = try engine.Program.init(@embedFile("shader/vert.glsl"), @embedFile("shader/frag.glsl"));

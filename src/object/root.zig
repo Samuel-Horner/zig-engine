@@ -4,6 +4,7 @@ const m = @import("../engine.zig").math;
 const UBO = @import("../engine.zig").UBO;
 
 pub const FPCamera = @import("fp_camera.zig");
+pub const AnimatedMesh = @import("animated_mesh.zig");
 
 pub const Mesh = struct {
     const Vertex = packed struct {
