@@ -21,7 +21,7 @@ pub const Font = struct {
     };
 
     characters: [128]Character,
-    tex_id: u32,
+    tex: engine.Texture,
     line_height: u32 = 0,
 
     tex_size: m.Vec2i,
@@ -84,24 +84,18 @@ pub const Font = struct {
         // Disable byte-alignment restriction
         gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1);
 
-        gl.GenTextures(1, (&font.tex_id)[0..1]);
-        gl.BindTexture(gl.TEXTURE_2D, font.tex_id);
-        gl.TexImage2D(
-            gl.TEXTURE_2D,
-            0,
-            gl.RED,
-            @intCast(tex_width),
-            @intCast(tex_height),
-            0,
-            gl.RED,
-            gl.UNSIGNED_BYTE,
-            data.ptr,
-        );
+        font.tex = try engine.Texture.init(data, @intCast(tex_width), @intCast(tex_height), .{
+            .format = gl.RED,
+            .parameters = &.{
+                .{ .name = gl.TEXTURE_WRAP_S, .value = gl.CLAMP_TO_EDGE },
+                .{ .name = gl.TEXTURE_WRAP_T, .value = gl.CLAMP_TO_EDGE },
+                .{ .name = gl.TEXTURE_MIN_FILTER, .value = gl.LINEAR },
+                .{ .name = gl.TEXTURE_MAG_FILTER, .value = gl.LINEAR },
+            },
+            .gen_mip_maps = false,
+        });
 
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.PixelStorei(gl.UNPACK_ALIGNMENT, 4);
 
         std.log.debug("Initialised font: '{s}'.", .{font_path});
 
@@ -157,7 +151,7 @@ pub const TextRenderer = struct {
         self.prog.use();
         gl.Uniform3f(self.color_loc, color.data[0], color.data[1], color.data[2]);
 
-        gl.BindTexture(gl.TEXTURE_2D, font.tex_id);
+        font.tex.bind(null);
 
         gl.BindVertexArray(engine.empty_vao);
         gl.BindBufferBase(gl.SHADER_STORAGE_BUFFER, self.bind_point, self.ssbo);

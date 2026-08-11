@@ -14,6 +14,7 @@ pub const Object = @import("object/root.zig");
 pub const math = @import("math/root.zig");
 pub const UBO = @import("ubo.zig").UBO;
 pub const ui = @import("ui.zig");
+pub const Texture = @import("texture.zig");
 
 pub var window: Window = undefined;
 

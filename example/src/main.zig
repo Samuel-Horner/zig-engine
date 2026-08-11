@@ -3,6 +3,8 @@ const std = @import("std");
 const engine = @import("zig_engine");
 const m = engine.math;
 
+const stbi = @import("zstbi");
+
 // Simple static mesh object
 const SimpleMesh = struct {
     mesh: engine.Object.Mesh,
@@ -37,6 +39,10 @@ const SimpleMesh = struct {
 };
 
 pub fn main(init: std.process.Init) !void {
+    stbi.init(init.io, init.gpa);
+    stbi.setFlipVerticallyOnLoad(true);
+    defer stbi.deinit();
+
     try engine.init(init.arena.allocator(), 1920, 1080, "Hello World", .{});
     defer engine.deinit() catch std.log.err("Failed to deinit engine.", .{});
     engine.window.setInputModeCursor(engine.input.CursorMode.Disabled);
@@ -46,6 +52,17 @@ pub fn main(init: std.process.Init) !void {
 
     var prog = try engine.Program.init(@embedFile("shader/vert.glsl"), @embedFile("shader/frag.glsl"));
     defer prog.deinit();
+
+    var cube_prog = try engine.Program.init(@embedFile("shader/cube_vert.glsl"), @embedFile("shader/cube_frag.glsl"));
+    defer cube_prog.deinit();
+
+    var image = try stbi.Image.loadFromFile("src/texture/test.png", 0);
+    var tex = try engine.Texture.init(image.data, @intCast(image.width), @intCast(image.height), .{ .format = engine.gl.RGBA });
+    defer tex.deinit();
+    image.deinit();
+
+    var cube = try SimpleMesh.init(init.gpa, "model/cube.obj", m.vec3(0, 0, -1), m.vec3(1, 1, 1), m.Quat.identity());
+    defer cube.deinit();
 
     var monkey = try SimpleMesh.init(init.gpa, "model/monkey.obj", m.vec3(2, 0, -5), m.vec3(1, 1, 1), m.Quat.identity());
     defer monkey.deinit();
@@ -117,6 +134,10 @@ pub fn main(init: std.process.Init) !void {
         prog.setVec3("cam_pos", cam.pos);
         try teapot.object().draw();
         try monkey.object().draw();
+
+        cube_prog.use();
+        tex.bind(null);
+        try cube.object().draw();
 
         try engine.ui.text_renderer.drawStringRelative(&font, debug_str, m.vec2(0, 1), m.vec3(1, 1, 1), 1);
 
