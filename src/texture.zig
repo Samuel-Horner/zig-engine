@@ -2,6 +2,50 @@
 const std = @import("std");
 const gl = @import("gl");
 
+pub const Format = struct {
+    const channels = enum {
+        RGBA,
+        RGB,
+        RG,
+        R,
+    };
+
+    const sizes = enum {
+        @"2",
+        @"4",
+        @"5",
+        @"8",
+        @"10",
+        @"12",
+        @"16",
+        @"32",
+    };
+
+    const types = enum {
+        /// Signed normalised
+        _SNORM,
+        F,
+        I,
+        UI,
+    };
+
+    /// Dynamically fetches image format, e.g.
+    /// ``` Zig
+    ///     Format.get(.RGBA, 16, .F);
+    /// ```
+    /// returns gl.RGBA16F
+    ///
+    /// Pass null as the size to not specify it.
+    /// Pass null as the type to use normalised int.
+    ///
+    /// Some combintations will not be valid - check [https://wikis.khronos.org/opengl/Image_Format](https://wikis.khronos.org/opengl/Image_Format).
+    pub fn get(comptime channel: channels, comptime size: ?sizes, comptime storage_type: ?types) c_int {
+        const name = @tagName(channel) ++ (if (size != null) @tagName(size.?) else "") ++ (if (storage_type != null) @tagName(storage_type.?) else "");
+        return @field(gl, name);
+        
+    }
+};
+
 const Parameter = struct {
     name: c_uint,
     value: c_int,

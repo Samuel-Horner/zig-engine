@@ -57,7 +57,7 @@ pub fn main(init: std.process.Init) !void {
     defer cube_prog.deinit();
 
     var image = try stbi.Image.loadFromFile("src/texture/test.png", 0);
-    var tex = try engine.Texture.init(image.data, @intCast(image.width), @intCast(image.height), .{ .format = engine.gl.RGBA });
+    var tex = try engine.Texture.init(image.data, @intCast(image.width), @intCast(image.height), .{ .format = engine.Texture.Format.get(.RGBA, null, null) });
     defer tex.deinit();
     image.deinit();
 
@@ -113,6 +113,12 @@ pub fn main(init: std.process.Init) !void {
             }
         } else {
             f11_down = false;
+        }
+
+        if (engine.window.keyPressed(engine.input.Key.Q)) {
+            engine.setRenderMode(true);
+        } else {
+            engine.setRenderMode(false);
         }
 
         if (engine.window.keyPressed(engine.input.Key.W)) cam.pos = cam.pos.add(cam.dir.muls(dt));

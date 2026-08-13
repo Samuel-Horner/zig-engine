@@ -115,6 +115,14 @@ pub fn finishRender() void {
     glfw.swapBuffers(window.id);
 }
 
+pub fn setRenderMode(wireframe: bool) void {
+    if (wireframe) {
+        gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE);
+    } else {
+        gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL);
+    }
+}
+
 test "unit" {
     _ = @import("math/root.zig");
 }
