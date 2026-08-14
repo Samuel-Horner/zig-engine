@@ -20,6 +20,9 @@ pub fn build(b: *std.Build) void {
 
     exe.root_module.addImport("zig_engine", zig_engine.module("zig_engine"));
 
+    const zstbi = b.dependency("zstbi", .{});
+    exe.root_module.addImport("zstbi", zstbi.module("root"));
+
     const run_step = b.step("run", "Run the app");
     const run_cmd = b.addRunArtifact(exe);
     run_step.dependOn(&run_cmd.step);

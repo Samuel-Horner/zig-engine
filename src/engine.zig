@@ -14,6 +14,7 @@ pub const Object = @import("object/root.zig");
 pub const math = @import("math/root.zig");
 pub const UBO = @import("ubo.zig").UBO;
 pub const ui = @import("ui.zig");
+pub const Texture = @import("texture.zig");
 
 pub var window: Window = undefined;
 
@@ -112,6 +113,14 @@ pub fn clearViewport() void {
 pub fn finishRender() void {
     glfw.pollEvents();
     glfw.swapBuffers(window.id);
+}
+
+pub fn setRenderMode(wireframe: bool) void {
+    if (wireframe) {
+        gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE);
+    } else {
+        gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL);
+    }
 }
 
 test "unit" {
