@@ -18,3 +18,4 @@ This engine does not intend to handle higher level 'user-space' operations, such
 - Loading textures (models are the exception here, since existing parsers leave a lot to be desired)
 - Managing game loop state and multi-threading
 - Scene / World editors
+- Lighting / other advanced systems like navigation
