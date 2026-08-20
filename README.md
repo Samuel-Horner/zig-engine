@@ -13,6 +13,7 @@ A general purpose low-level game engine written in Zig for Zig, using OpenGL & G
 | Object hierarchy | | In progress |
 | Animated Meshes | | In progress |
 | Immediate mode UI | | Not started |
+| Colliders | | Not started |
 
 This engine does not intend to handle higher level 'user-space' operations, such as:
 - Loading textures (models are the exception here, since existing parsers leave a lot to be desired)
