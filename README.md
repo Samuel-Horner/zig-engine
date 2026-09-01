@@ -12,6 +12,7 @@ A general purpose low-level game engine written in Zig for Zig, using OpenGL & G
 | SIMD Maths | | Done |
 | Object hierarchy | | In progress |
 | Animated Meshes | | In progress |
+| Colliders | | Not started |
 | Immediate mode UI | | Not started |
 
 This engine does not intend to handle higher level 'user-space' operations, such as:

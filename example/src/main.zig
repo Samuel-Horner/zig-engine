@@ -5,36 +5,74 @@ const m = engine.math;
 
 const stbi = @import("zstbi");
 
-// Simple static mesh object
-const SimpleMesh = struct {
-    mesh: engine.Object.Mesh,
+// Static mesh object
+const Mesh = struct {
+    mesh: engine.Object.StaticMesh,
+    ubo: engine.UBO(&.{m.Mat4}),
 
     allocator: std.mem.Allocator,
 
-    pub fn object(self: *SimpleMesh) engine.Object {
-        return engine.Object.init(self, &self.mesh);
+    pub fn draw(self: *const Mesh, ubo_bind_point: c_uint) void {
+        self.ubo.bind(ubo_bind_point);
+        self.mesh.draw();
     }
 
-    pub fn tick(self: *SimpleMesh) void {
-        _ = self;
-    }
-
-    pub fn init(allocator: std.mem.Allocator, comptime path: []const u8, pos: m.Vec3, scale: m.Vec3, rot: m.Quat) !SimpleMesh {
-        const model = m.Mat4.translationVec3(pos).mul(m.Mat4.fromQuaternion(rot)).mul(m.Mat4.scalingVec3(scale));
+    pub fn init(allocator: std.mem.Allocator, comptime path: []const u8, pos: m.Vec3, scale: m.Vec3, rot: m.Quat) !Mesh {
+        const model = m.Mat4.translationVec3(pos).mul(m.Mat4.fromQuaternion(rot)).mul(m.Mat4.scalingVec3(scale)).transpose();
 
         std.log.debug("Parsing OBJ: {s}.", .{path});
-        var self: SimpleMesh = .{
-            .mesh = try engine.Object.Mesh.fromOBJ(allocator, @embedFile(path), 1, model),
+        var self: Mesh = .{
+            .mesh = try engine.Object.fromOBJ(allocator, @embedFile(path)),
             .allocator = allocator,
+            .ubo = try .init(.{}),
         };
 
         self.mesh.dispatch(.{});
+        self.ubo.write(@as([]const f32, @ptrCast(&model.data)), 0);
         return self;
     }
 
-    pub fn deinit(self: *SimpleMesh) void {
+    pub fn deinit(self: *Mesh) void {
         self.mesh.undispatch();
-        self.mesh.deinit(self.allocator);
+        self.allocator.free(self.mesh.data);
+        self.allocator.free(self.mesh.indices);
+        self.ubo.deinit();
+    }
+};
+
+// Animated mesh object
+const AnimatedMesh = struct {
+    mesh: engine.Object.AnimatedMesh,
+    animation: engine.Object.Animation,
+    ubo: engine.UBO(&.{m.Mat4}),
+
+    allocator: std.mem.Allocator,
+
+    pub fn draw(self: *const AnimatedMesh, t: f32, ubo_bind_point: c_uint, animation_ubo_bind_point: c_uint, animation_ssbo_bind_point: c_uint) void {
+        self.ubo.bind(ubo_bind_point);
+        self.animation.bind(animation_ssbo_bind_point, animation_ubo_bind_point);
+        self.animation.writeUBO(t);
+        self.mesh.draw();
+    }
+
+    pub fn init(allocator: std.mem.Allocator, data: []const engine.Object.AnimatedMesh.Vertex, indices: []const u32, animation: engine.Object.Animation, model: m.Mat4) !AnimatedMesh {
+        var self: AnimatedMesh = .{
+            .mesh = .init(data, indices),
+            .animation = animation,
+            .allocator = allocator,
+            .ubo = try .init(.{}),
+        };
+
+        self.mesh.dispatch(.{});
+        try self.animation.dispatch(allocator);
+        self.ubo.write(@as([]const f32, @ptrCast(&model.transpose().data)), 0);
+        return self;
+    }
+
+    pub fn deinit(self: *AnimatedMesh) void {
+        self.animation.undispatch();
+        self.mesh.undispatch();
+        self.ubo.deinit();
     }
 };
 
@@ -43,40 +81,50 @@ pub fn main(init: std.process.Init) !void {
     stbi.setFlipVerticallyOnLoad(true);
     defer stbi.deinit();
 
-    try engine.init(init.arena.allocator(), 1920, 1080, "Hello World", .{});
+    try engine.init(init.gpa, 600, 400, "Hello World", .{});
     defer engine.deinit() catch std.log.err("Failed to deinit engine.", .{});
     engine.window.setInputModeCursor(engine.input.CursorMode.Disabled);
-    engine.window.fullScreen();
-
-    // TODO: REMOVE
-    // if (true) return;
+    // engine.window.fullScreen();
 
     const font = try engine.ui.Font.init(engine.allocator, "src/font/JetBrainsMonoNerdFont-Regular.ttf", 64);
 
     var prog = try engine.Program.init(@embedFile("shader/vert.glsl"), @embedFile("shader/frag.glsl"));
     defer prog.deinit();
 
-    var cube_prog = try engine.Program.init(@embedFile("shader/cube_vert.glsl"), @embedFile("shader/cube_frag.glsl"));
-    defer cube_prog.deinit();
+    var animated_prog = try engine.Program.init(@embedFile("shader/animated_mesh_vert.glsl"), @embedFile("shader/animated_mesh_frag.glsl"));
+    defer animated_prog.deinit();
+
+    var animated_mesh = try AnimatedMesh.init(init.gpa, &.{
+        .{ .x = 0, .y = -1, .z = 0, .bone = 0 },
+        .{ .x = 0, .y = 1, .z = 0, .bone = 0 },
+        .{ .x = 1, .y = 1, .z = 0, .bone = 0 },
+    }, &.{ 2, 1, 0 }, .init(
+        &.{ m.Mat4.identity(), m.Mat4.translation(0, 1, 0), m.Mat4.fromQuaternion(m.Quat.fromEulerAngles(m.vec3(0, std.math.pi * 0.5, 0), .xyz)) },
+        &.{ 0, 1, 2, 3 },
+    ), m.Mat4.translation(1, 0, -2));
+    defer animated_mesh.deinit();
+
+    var tex_prog = try engine.Program.init(@embedFile("shader/tex_vert.glsl"), @embedFile("shader/tex_frag.glsl"));
+    defer tex_prog.deinit();
 
     var image = try stbi.Image.loadFromFile("src/texture/test.png", 0);
     var tex = try engine.Texture.init(image.data, @intCast(image.width), @intCast(image.height), .{ .format = engine.Texture.Format.get(.RGBA, null, null) });
     defer tex.deinit();
     image.deinit();
 
-    var cube = try SimpleMesh.init(init.gpa, "model/cube.obj", m.vec3(0, 0, -1), m.vec3(1, 1, 1), m.Quat.identity());
-    defer cube.deinit();
+    var tex_plane = try Mesh.init(init.gpa, "model/cube.obj", m.vec3(0, 0, -1), m.vec3(1, 1, 1), m.Quat.identity());
+    defer tex_plane.deinit();
 
-    var monkey = try SimpleMesh.init(init.gpa, "model/monkey.obj", m.vec3(2, 0, -5), m.vec3(1, 1, 1), m.Quat.identity());
+    var monkey = try Mesh.init(init.gpa, "model/monkey.obj", m.vec3(2, 0, -5), m.vec3(1, 1, 1), m.Quat.identity());
     defer monkey.deinit();
 
-    var teapot = try SimpleMesh.init(init.gpa, "model/utah_teapot.obj", m.vec3(-2, -1.5, -5), m.vec3(1, 1, 1), m.Quat.identity());
+    var teapot = try Mesh.init(init.gpa, "model/utah_teapot.obj", m.vec3(-2, -1.5, -5), m.vec3(1, 1, 1), m.Quat.identity());
     defer teapot.deinit();
 
     // Cam is a pointer type here since we heap allocate it.
     // This is a necessary downside of registering an owned callback in a initialisation function.
     // You can stack allocate structs with owned callbacks, but you must register the callback outside the initialiser to avoid dead pointers.
-    var cam = try engine.Object.FPCamera.init(init.gpa, 0.05, 0);
+    var cam = try engine.Object.FPCamera.init(init.gpa, 0.05);
     defer cam.deinit(init.gpa);
 
     prog.use();
@@ -89,11 +137,14 @@ pub fn main(init: std.process.Init) !void {
     var frames: usize = 0;
     var fps: usize = 0;
 
-    var previous = std.Io.Clock.now(.awake, init.io).toNanoseconds();
+    var previous: f32 = 0;
+
+    const start = std.Io.Clock.now(.awake, init.io).toMicroseconds();
     while (!engine.window.shouldClose()) {
-        const time_stamp = std.Io.Clock.now(.awake, init.io).toNanoseconds();
-        const dt: f32 = @floatCast(@as(f128, @floatFromInt(time_stamp - previous)) / 1e9);
-        previous = time_stamp;
+        const time_stamp = std.Io.Clock.now(.awake, init.io).toMicroseconds();
+        const t: f32 = @floatCast(@as(f128, @floatFromInt(time_stamp - start)) / 1e6);
+        const dt: f32 = t - previous;
+        previous = t;
 
         frames += 1;
 
@@ -132,21 +183,25 @@ pub fn main(init: std.process.Init) !void {
         if (engine.window.keyPressed(engine.input.Key.LeftControl)) cam.pos = cam.pos.sub(engine.Object.FPCamera.global_up.muls(dt));
 
         var debug_str_buf: [256]u8 = undefined;
-        const debug_str = std.fmt.bufPrint(&debug_str_buf, "fps:{}\nres:{}x{}\nx:{d:.3} y:{d:.3} z:{d:.3}\np:{d:.3} y:{d:.3}", .{ fps, engine.window.width, engine.window.height, cam.pos.data[0], cam.pos.data[1], cam.pos.data[2], cam.pitch, cam.yaw }) catch "Buffer Print Error";
+        const debug_str = std.fmt.bufPrint(&debug_str_buf, "t: {d:.3}\nfps:{}\nres:{}x{}\nx:{d:.3} y:{d:.3} z:{d:.3}\np:{d:.3} y:{d:.3}", .{ t, fps, engine.window.width, engine.window.height, cam.pos.data[0], cam.pos.data[1], cam.pos.data[2], cam.pitch, cam.yaw }) catch "Buffer Print Error";
 
         cam.renderTick();
 
         engine.clearViewport();
 
         prog.use();
-        cam.ubo.bind();
+        cam.ubo.bind(0);
         prog.setVec3("cam_pos", cam.pos);
-        try teapot.object().draw();
-        try monkey.object().draw();
+        teapot.draw(1);
+        monkey.draw(1);
 
-        cube_prog.use();
+        tex_prog.use();
         tex.bind(null);
-        try cube.object().draw();
+        tex_plane.draw(1);
+
+        animated_prog.use();
+        cam.ubo.bind(0);
+        animated_mesh.draw(t, 1, 2, 0);
 
         try engine.ui.text_renderer.drawStringRelative(&font, debug_str, m.vec2(0, 1), m.vec3(1, 1, 1), 1);
 

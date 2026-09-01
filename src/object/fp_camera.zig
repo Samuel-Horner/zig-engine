@@ -69,14 +69,14 @@ pub fn cursorCallback(generic_self: *anyopaque, x: f64, y: f64) void {
     self.prevy = y;
 }
 
-pub fn bind(self: *const Self) void {
-    self.ubo.bind();
+pub fn bind(self: *const Self, ubo_bind_point: c_uint) void {
+    self.ubo.bind(ubo_bind_point);
 }
 
-pub fn init(allocator: std.mem.Allocator, sensitivity: f32, ubo_binding: u32) !*Self {
+pub fn init(allocator: std.mem.Allocator, sensitivity: f32) !*Self {
     var cam = try allocator.create(Self);
     cam.sensitivity = sensitivity;
-    cam.ubo = try .init(ubo_binding, .{});
+    cam.ubo = try .init(.{});
 
     cam.prevx = 0;
     cam.prevy = 0;

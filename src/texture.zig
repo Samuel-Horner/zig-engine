@@ -39,7 +39,7 @@ pub const Format = struct {
     /// Pass null as the type to use normalised int.
     ///
     /// Some combintations will not be valid - check [https://wikis.khronos.org/opengl/Image_Format](https://wikis.khronos.org/opengl/Image_Format).
-    pub fn get(comptime channel: Channels, comptime size: ?Sizes, comptime storage_type: ?Types) c_int {
+    pub fn get(comptime channel: Channels, comptime size: ?Sizes, comptime storage_type: ?Types) c_uint {
         const name = @tagName(channel) ++ (if (size != null) @tagName(size.?) else "") ++ (if (storage_type != null) @tagName(storage_type.?) else "");
         return @field(gl, name);
         

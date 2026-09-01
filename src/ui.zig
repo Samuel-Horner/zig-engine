@@ -253,6 +253,7 @@ pub const TextRenderer = struct {
     }
 
     pub fn deinit(self: *TextRenderer, allocator: std.mem.Allocator) void {
+        gl.DeleteBuffers(1, &.{self.ssbo});
         allocator.free(self.buffer_prep);
         allocator.destroy(self);
     }

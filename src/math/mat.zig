@@ -404,6 +404,7 @@ pub fn Mat(comptime T: type, r: comptime_int, c: comptime_int) type {
 
         /// Returns a right-handed rotation transformation matrix.
         /// `angle` takes in radians.
+        /// BROKEN!!!
         pub fn rotation(axis: Vec(T, 3), angle: T) Self {
             comptime if (r != 4 or c != 4) {
                 @compileError("Mat rotation is only defined for 4x4 matrices");
