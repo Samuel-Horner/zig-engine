@@ -1,3 +1,6 @@
+//! Zig Engine
+//! See ... for docs
+
 const std = @import("std");
 pub const c = @cImport({
     @cInclude("ft2build.h");

@@ -115,9 +115,6 @@ pub fn main(init: std.process.Init) !void {
     var tex_plane = try Mesh.init(init.gpa, "model/cube.obj", m.vec3(0, 0, -1), m.vec3(1, 1, 1), m.Quat.identity());
     defer tex_plane.deinit();
 
-    var monkey = try Mesh.init(init.gpa, "model/monkey.obj", m.vec3(2, 0, -5), m.vec3(1, 1, 1), m.Quat.identity());
-    defer monkey.deinit();
-
     var teapot = try Mesh.init(init.gpa, "model/utah_teapot.obj", m.vec3(-2, -1.5, -5), m.vec3(1, 1, 1), m.Quat.identity());
     defer teapot.deinit();
 
@@ -193,7 +190,6 @@ pub fn main(init: std.process.Init) !void {
         cam.ubo.bind(0);
         prog.setVec3("cam_pos", cam.pos);
         teapot.draw(1);
-        monkey.draw(1);
 
         tex_prog.use();
         tex.bind(null);
