@@ -42,7 +42,7 @@ const Mesh = struct {
 
 // Animated mesh object
 const AnimatedMesh = struct {
-    mesh: engine.Object.AnimatedMesh,
+    mesh: engine.Object.AnimatedMesh(1),
     animation: engine.Object.Animation,
     ubo: engine.UBO(&.{m.Mat4}),
 
@@ -55,10 +55,15 @@ const AnimatedMesh = struct {
         self.mesh.draw();
     }
 
-    pub fn init(allocator: std.mem.Allocator, data: []const engine.Object.AnimatedMesh.Vertex, indices: []const u32, animation: engine.Object.Animation, model: m.Mat4) !AnimatedMesh {
+    pub fn init(allocator: std.mem.Allocator, comptime path: []const u8, model: m.Mat4) !AnimatedMesh {
+        const parsed_aobj = try engine.Object.fromAOBJ(allocator, @embedFile(path), 1);
+
+        std.log.debug("Mesh: {any}\n", .{parsed_aobj[0]});
+        std.log.debug("Animation: {any}", .{parsed_aobj[1].offsets[3].data});
+
         var self: AnimatedMesh = .{
-            .mesh = .init(data, indices),
-            .animation = animation,
+            .mesh = parsed_aobj[0],
+            .animation = parsed_aobj[1],
             .allocator = allocator,
             .ubo = try .init(.{}),
         };
@@ -72,6 +77,10 @@ const AnimatedMesh = struct {
     pub fn deinit(self: *AnimatedMesh) void {
         self.animation.undispatch();
         self.mesh.undispatch();
+        self.allocator.free(self.mesh.data);
+        self.allocator.free(self.mesh.indices);
+        self.allocator.free(self.animation.offsets);
+        self.allocator.free(self.animation.time_steps);
         self.ubo.deinit();
     }
 };
@@ -94,14 +103,7 @@ pub fn main(init: std.process.Init) !void {
     var animated_prog = try engine.Program.init(@embedFile("shader/animated_mesh_vert.glsl"), @embedFile("shader/animated_mesh_frag.glsl"));
     defer animated_prog.deinit();
 
-    var animated_mesh = try AnimatedMesh.init(init.gpa, &.{
-        .{ .x = 0, .y = -1, .z = 0, .bone = 0 },
-        .{ .x = 0, .y = 1, .z = 0, .bone = 0 },
-        .{ .x = 1, .y = 1, .z = 0, .bone = 0 },
-    }, &.{ 2, 1, 0 }, .init(
-        &.{ m.Mat4.identity(), m.Mat4.translation(0, 1, 0), m.Mat4.fromQuaternion(m.Quat.fromEulerAngles(m.vec3(0, std.math.pi * 0.5, 0), .xyz)) },
-        &.{ 0, 1, 2, 3 },
-    ), m.Mat4.translation(1, 0, -2));
+    var animated_mesh = try AnimatedMesh.init(init.gpa, "model/breathe.aobj", m.Mat4.translation(0, -2, -2));
     defer animated_mesh.deinit();
 
     var tex_prog = try engine.Program.init(@embedFile("shader/tex_vert.glsl"), @embedFile("shader/tex_frag.glsl"));
@@ -112,7 +114,7 @@ pub fn main(init: std.process.Init) !void {
     defer tex.deinit();
     image.deinit();
 
-    var tex_plane = try Mesh.init(init.gpa, "model/cube.obj", m.vec3(0, 0, -1), m.vec3(1, 1, 1), m.Quat.identity());
+    var tex_plane = try Mesh.init(init.gpa, "model/cube.obj", m.vec3(2, 0, -5), m.vec3(2, 2, 2), m.Quat.identity());
     defer tex_plane.deinit();
 
     var teapot = try Mesh.init(init.gpa, "model/utah_teapot.obj", m.vec3(-2, -1.5, -5), m.vec3(1, 1, 1), m.Quat.identity());
