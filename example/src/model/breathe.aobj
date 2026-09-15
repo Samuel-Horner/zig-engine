@@ -1,0 +1,28 @@
+# Custom animation format
+# Adapted from restricted OBJ format
+# Explanation:
+# Adds a new element type, bone, represented as:
+# > b 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 0 1 2 3 ...
+# where each set of 16 numbers make up the bone's offset matrx _from the model root_, in row major order.
+#
+# Faces then have extra per-vertex parameters indicating bone weights, so the face:
+# > f 1/1/1/1,0.5/2,0.25/3,0.25 ...
+# has a vertex with pos, tex, norm at 1, and with a .5 weight for bone 1, a .25 weight for bone 2, and a .25 weight for bone 3
+#
+# there is then a global keyframe parameter which indicates the start-time of each key frame in seconds, so:
+# > kf 0.0 1.0 2.0
+# indicates that keyframe 1 starts at 0 seconds, keyframe 2 starts at 1 seconds, and keyframe 1 re-starts at 2 seconds.
+# note that there always needs to be 1 more keyframe start time than bones have offsets, and that each bone needs to have the same amount of offsets.
+
+v 0.5 0.5 0
+v 0.5 -0.5 0
+v -0.5 -0.5 0
+v -0.5 0.5 0
+
+b 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 2.0 0.0 0.0 0.0 0.0 2.0 0.0 0.0 0.0 0.0 2.0 0.0 0.0 0.0 0.0 1.0
+b 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0
+
+kf 0.0 1.0 2.0
+
+f 4///1,1.0 2///1,1.0 1///1,1.0
+f 4///2,1.0 3///2,1.0 2///2,1.0
