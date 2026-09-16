@@ -43,44 +43,45 @@ const Mesh = struct {
 // Animated mesh object
 const AnimatedMesh = struct {
     mesh: engine.Object.AnimatedMesh(1),
-    animation: engine.Object.Animation,
+    animations: []engine.Object.Animation,
     ubo: engine.UBO(&.{m.Mat4}),
 
     allocator: std.mem.Allocator,
 
-    pub fn draw(self: *const AnimatedMesh, t: f32, ubo_bind_point: c_uint, animation_ubo_bind_point: c_uint, animation_ssbo_bind_point: c_uint) void {
+    pub fn draw(self: *const AnimatedMesh, t: f32, animation: usize, ubo_bind_point: c_uint, animation_ubo_bind_point: c_uint, animation_ssbo_bind_point: c_uint) void {
         self.ubo.bind(ubo_bind_point);
-        self.animation.bind(animation_ssbo_bind_point, animation_ubo_bind_point);
-        self.animation.writeUBO(t);
+        self.animations[animation].bind(animation_ssbo_bind_point, animation_ubo_bind_point);
+        self.animations[animation].writeUBO(t);
         self.mesh.draw();
     }
 
     pub fn init(allocator: std.mem.Allocator, comptime path: []const u8, model: m.Mat4) !AnimatedMesh {
         const parsed_aobj = try engine.Object.fromAOBJ(allocator, @embedFile(path), 1);
-
-        std.log.debug("Mesh: {any}\n", .{parsed_aobj[0]});
-        std.log.debug("Animation: {any}", .{parsed_aobj[1].offsets[3].data});
-
         var self: AnimatedMesh = .{
             .mesh = parsed_aobj[0],
-            .animation = parsed_aobj[1],
+            .animations = parsed_aobj[1],
             .allocator = allocator,
             .ubo = try .init(.{}),
         };
 
         self.mesh.dispatch(.{});
-        try self.animation.dispatch(allocator);
+        for (0..self.animations.len) |i| {
+            try self.animations[i].dispatch(allocator);
+        }
         self.ubo.write(@as([]const f32, @ptrCast(&model.transpose().data)), 0);
         return self;
     }
 
     pub fn deinit(self: *AnimatedMesh) void {
-        self.animation.undispatch();
         self.mesh.undispatch();
         self.allocator.free(self.mesh.data);
         self.allocator.free(self.mesh.indices);
-        self.allocator.free(self.animation.offsets);
-        self.allocator.free(self.animation.time_steps);
+        for (0..self.animations.len) |i| {
+            self.animations[i].undispatch();
+            self.allocator.free(self.animations[i].offsets);
+            self.allocator.free(self.animations[i].time_steps);
+        }
+        self.allocator.free(self.animations);
         self.ubo.deinit();
     }
 };
@@ -199,7 +200,12 @@ pub fn main(init: std.process.Init) !void {
 
         animated_prog.use();
         cam.ubo.bind(0);
-        animated_mesh.draw(t, 1, 2, 0);
+
+        if (t < 10) {
+            animated_mesh.draw(t, 0, 1, 2, 0);
+        } else {
+            animated_mesh.draw(t, 1, 1, 2, 0);
+        }
 
         try engine.ui.text_renderer.drawStringRelative(&font, debug_str, m.vec2(0, 1), m.vec3(1, 1, 1), 1);
 

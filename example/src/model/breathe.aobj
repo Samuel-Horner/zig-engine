@@ -9,20 +9,29 @@
 # > f 1/1/1/1,0.5/2,0.25/3,0.25 ...
 # has a vertex with pos, tex, norm at 1, and with a .5 weight for bone 1, a .25 weight for bone 2, and a .25 weight for bone 3
 #
-# there is then a global keyframe parameter which indicates the start-time of each key frame in seconds, so:
+# We then keyframe parameter which indicates the start-time of each key frame in seconds, so:
 # > kf 0.0 1.0 2.0
 # indicates that keyframe 1 starts at 0 seconds, keyframe 2 starts at 1 seconds, and keyframe 1 re-starts at 2 seconds.
 # note that there always needs to be 1 more keyframe start time than bones have offsets, and that each bone needs to have the same amount of offsets.
+#
+# You can declare multiple animations by re-declaring bones and keyframes, see below
 
 v 0.5 0.5 0
 v 0.5 -0.5 0
 v -0.5 -0.5 0
 v -0.5 0.5 0
 
+# Animation 1
 b 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 2.0 0.0 0.0 0.0 0.0 2.0 0.0 0.0 0.0 0.0 2.0 0.0 0.0 0.0 0.0 1.0
 b 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0
 
 kf 0.0 1.0 2.0
+
+# Animation 2
+b 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0
+b 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 2.0 0.0 0.0 0.0 0.0 2.0 0.0 0.0 0.0 0.0 2.0 0.0 0.0 0.0 0.0 1.0
+
+kf 0.0 1.5 3.0
 
 f 4///1,1.0 2///1,1.0 1///1,1.0
 f 4///2,1.0 3///2,1.0 2///2,1.0

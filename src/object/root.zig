@@ -210,12 +210,15 @@ pub fn fromOBJ(allocator: std.mem.Allocator, src: []const u8) !StaticMesh {
 }
 
 /// Remember to deinit the mesh slices!
-pub fn fromAOBJ(allocator: std.mem.Allocator, src: []const u8, comptime n: u32) !struct { AnimatedMesh(n), Animation } {
+pub fn fromAOBJ(allocator: std.mem.Allocator, src: []const u8, comptime n: u32) !struct { AnimatedMesh(n), []Animation } {
     var data: std.ArrayList(AnimatedMesh(n).Vertex) = .empty;
     defer data.deinit(allocator);
 
     var indices: std.ArrayList(u32) = .empty;
     defer indices.deinit(allocator);
+
+    var animations: std.ArrayList(Animation) = .empty;
+    defer animations.deinit(allocator);
 
     var poss: std.ArrayList(m.Vec3) = .empty;
     defer poss.deinit(allocator);
@@ -226,16 +229,8 @@ pub fn fromAOBJ(allocator: std.mem.Allocator, src: []const u8, comptime n: u32) 
     var norms: std.ArrayList(m.Vec3) = .empty;
     defer norms.deinit(allocator);
 
-    var bones: std.ArrayList(std.ArrayList(m.Mat4)) = .empty;
-    defer {
-        for (0..bones.items.len) |i| {
-            bones.items[i].deinit(allocator);
-        }
-        bones.deinit(allocator);
-    }
-
-    var keyframes: std.ArrayList(f32) = .empty;
-    defer keyframes.deinit(allocator);
+    var bones: std.ArrayList(m.Mat4) = .empty;
+    defer bones.deinit(allocator);
 
     var defined_verts: std.StringHashMap(usize) = .init(allocator);
     defer defined_verts.deinit();
@@ -269,9 +264,6 @@ pub fn fromAOBJ(allocator: std.mem.Allocator, src: []const u8, comptime n: u32) 
             const z = try std.fmt.parseFloat(f32, value_iter.next().?);
             try norms.append(allocator, m.vec3(x, y, z));
         } else if (std.mem.eql(u8, indicator, "b")) {
-            // Bone
-            var bone: std.ArrayList(m.Mat4) = .empty;
-
             var offset: m.Mat4 = undefined;
             var i: usize = 0;
             while (value_iter.next()) |val| {
@@ -279,15 +271,26 @@ pub fn fromAOBJ(allocator: std.mem.Allocator, src: []const u8, comptime n: u32) 
                 offset.data[@divFloor(@mod(i, 16), 4)][@mod(i, 4)] = try std.fmt.parseFloat(f32, val);
                 i += 1;
                 if (@mod(i, 16) == 0) {
-                    try bone.append(allocator, offset);
+                    try bones.append(allocator, offset);
+                    std.log.debug("Offset: {any}", .{offset});
                 }
             }
-
-            try bones.append(allocator, bone);
         } else if (std.mem.eql(u8, indicator, "kf")) {
+            var keyframes: std.ArrayList(f32) = .empty;
+            defer keyframes.deinit(allocator);
+
             while (value_iter.next()) |val| {
                 try keyframes.append(allocator, try std.fmt.parseFloat(f32, val));
             }
+            // Build animation
+            var offsets: []m.Mat4 = try allocator.alloc(m.Mat4, bones.items.len);
+            const offsets_per_kf: usize = @divFloor(bones.items.len, keyframes.items.len - 1);
+            for (0..bones.items.len) |i| {
+                offsets[@divFloor(i + 1, offsets_per_kf) + @mod(i, offsets_per_kf)] = bones.items[i];
+            }
+
+            try animations.append(allocator, .init(offsets, try allocator.dupe(f32, keyframes.items)));
+            bones.clearRetainingCapacity();
         } else if (std.mem.eql(u8, indicator, "f")) {
             // Face
             while (value_iter.next()) |vert_buf| {
@@ -320,7 +323,7 @@ pub fn fromAOBJ(allocator: std.mem.Allocator, src: []const u8, comptime n: u32) 
                         vert.nz = norm.data[2];
                     }
 
-                    var i:usize = 0;
+                    var i: usize = 0;
                     while (index_iter.next()) |bone| {
                         var bone_iter = std.mem.splitScalar(u8, bone, ',');
                         const bone_index: u32 = try std.fmt.parseInt(u32, bone_iter.next().?, 10) - 1;
@@ -349,16 +352,8 @@ pub fn fromAOBJ(allocator: std.mem.Allocator, src: []const u8, comptime n: u32) 
         }
     }
 
-    // Build animation
-    var offsets: []m.Mat4 = try allocator.alloc(m.Mat4, bones.items.len * (keyframes.items.len - 1));
-    for (keyframes.items[0 .. keyframes.items.len - 1], 0..) |_, i| {
-        for (bones.items, 0..) |bone, j| {
-            offsets[i * (keyframes.items.len - 1) + j] = bone.items[i];
-        }
-    }
-
     return .{
         .init(try allocator.dupe(AnimatedMesh(n).Vertex, data.items), try allocator.dupe(u32, indices.items)),
-        .init(offsets, try allocator.dupe(f32, keyframes.items)),
+        try allocator.dupe(Animation, animations.items),
     };
 }
