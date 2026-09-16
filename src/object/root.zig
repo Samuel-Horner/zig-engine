@@ -272,7 +272,6 @@ pub fn fromAOBJ(allocator: std.mem.Allocator, src: []const u8, comptime n: u32) 
                 i += 1;
                 if (@mod(i, 16) == 0) {
                     try bones.append(allocator, offset);
-                    std.log.debug("Offset: {any}", .{offset});
                 }
             }
         } else if (std.mem.eql(u8, indicator, "kf")) {
